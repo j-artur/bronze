@@ -92,13 +92,14 @@ impl<'a> Game for WinGame<'a> {
     fn finalize(self) {}
 }
 
-#[allow(unused)]
+use engine::window::WindowMode::*;
+
 fn main() {
     let mut window = Window::new("Window Game Demo");
     window.set_icon(IDI_ICON);
     window.set_cursor(IDC_CURSOR);
-    // window.set_mode(Windowed);
-    // window.set_size(coords!(960, 540));
+    window.set_mode(Windowed);
+    window.set_size(coords!(960, 540));
     window.set_bg(RGB(240, 240, 160));
     window.create();
 
