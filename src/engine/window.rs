@@ -5,25 +5,11 @@ use winapi::shared::{minwindef::*, windef::*, windowsx::*};
 use winapi::um::{libloaderapi::*, wingdi::*, winuser::*};
 use WindowMode::*;
 
-macro_rules! coords {
-    ($x:expr, $y:expr) => {
-        Coords { x: $x, y: $y }
-    };
-    () => {
-        Coords { x: 0, y: 0 }
-    };
-}
-
-pub(crate) use coords;
-
 static mut KEYS: [bool; 256] = [false; 256];
-static mut MOUSE_POS: Coords = coords!();
+static mut MOUSE_POS: Point = (0, 0);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Coords {
-    pub x: i32,
-    pub y: i32,
-}
+pub type Point = (i32, i32);
+pub type Size = (i32, i32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowMode {
@@ -34,15 +20,15 @@ pub enum WindowMode {
 pub struct Window {
     hinstance: HINSTANCE,
     hwnd: HWND,
-    size: Coords,
+    size: Size,
     icon: HICON,
     cursor: HCURSOR,
     bg_color: COLORREF,
     title: String,
     style: DWORD,
     mode: WindowMode,
-    pos: Coords,
-    center: Coords,
+    pos: Point,
+    center: Point,
 }
 
 impl Window {
@@ -51,27 +37,27 @@ impl Window {
             Window {
                 hinstance: GetModuleHandleW(null()),
                 hwnd: null_mut(),
-                size: coords!(GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)),
+                size: (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)),
                 icon: LoadIconW(null_mut(), IDI_APPLICATION),
                 cursor: LoadCursorW(null_mut(), IDC_ARROW),
                 bg_color: RGB(0, 0, 0),
                 title: title.to_string(),
                 style: WS_POPUP | WS_VISIBLE,
                 mode: WindowMode::Fullscreen,
-                pos: coords!(),
-                center: coords!(),
+                pos: (0, 0),
+                center: (0, 0),
             }
         }
     }
 
-    pub fn set_size(&mut self, size: Coords) {
+    pub fn set_size(&mut self, size: Size) {
         self.size = size;
 
-        self.center = coords!(size.x / 2, size.y / 2);
+        self.center = (size.0 / 2, size.1 / 2);
 
-        self.pos = coords!(
-            (unsafe { GetSystemMetrics(SM_CXSCREEN) } - self.size.x) / 2,
-            (unsafe { GetSystemMetrics(SM_CYSCREEN) } - self.size.y) / 2
+        self.pos = (
+            (unsafe { GetSystemMetrics(SM_CXSCREEN) } - self.size.0) / 2,
+            (unsafe { GetSystemMetrics(SM_CYSCREEN) } - self.size.1) / 2,
         );
     }
 
@@ -115,10 +101,10 @@ impl Window {
                     .collect::<Vec<u16>>()
                     .as_ptr(),
                 self.style,
-                self.pos.x,
-                self.pos.y,
-                self.size.x,
-                self.size.y,
+                self.pos.0,
+                self.pos.1,
+                self.size.0,
+                self.size.1,
                 null_mut(),
                 null_mut(),
                 self.hinstance,
@@ -130,8 +116,8 @@ impl Window {
             let mut rect = RECT {
                 left: 0,
                 top: 0,
-                right: self.size.x,
-                bottom: self.size.y,
+                right: self.size.0,
+                bottom: self.size.1,
             };
 
             unsafe {
@@ -143,16 +129,16 @@ impl Window {
                 )
             };
 
-            self.pos = coords!(
+            self.pos = (
                 (unsafe { GetSystemMetrics(SM_CXSCREEN) } - rect.right + rect.left) / 2,
-                (unsafe { GetSystemMetrics(SM_CYSCREEN) } - rect.bottom + rect.top) / 2
+                (unsafe { GetSystemMetrics(SM_CYSCREEN) } - rect.bottom + rect.top) / 2,
             );
 
             unsafe {
                 MoveWindow(
                     self.hwnd,
-                    self.pos.x,
-                    self.pos.y,
+                    self.pos.0,
+                    self.pos.1,
                     rect.right - rect.left,
                     rect.bottom - rect.top,
                     1,
@@ -171,16 +157,16 @@ impl Window {
         self.hwnd
     }
 
-    pub fn size(&self) -> Coords {
+    pub fn size(&self) -> Size {
         self.size
     }
 
     pub fn width(&self) -> i32 {
-        self.size.x
+        self.size.0
     }
 
     pub fn height(&self) -> i32 {
-        self.size.y
+        self.size.1
     }
 
     pub fn set_icon(&mut self, icon: u16) {
@@ -199,7 +185,7 @@ impl Window {
         self.mode
     }
 
-    pub fn center(&self) -> Coords {
+    pub fn center(&self) -> Point {
         self.center
     }
 
@@ -223,16 +209,16 @@ impl Window {
         unsafe { !KEYS[key as usize] }
     }
 
-    pub fn mouse(&self) -> Coords {
+    pub fn mouse(&self) -> Point {
         unsafe { MOUSE_POS }
     }
 
     pub fn mouse_x(&self) -> i32 {
-        unsafe { MOUSE_POS.x }
+        unsafe { MOUSE_POS.0 }
     }
 
     pub fn mouse_y(&self) -> i32 {
-        unsafe { MOUSE_POS.y }
+        unsafe { MOUSE_POS.1 }
     }
 
     pub fn bg(&self) -> COLORREF {
@@ -243,7 +229,7 @@ impl Window {
         self.bg_color = color;
     }
 
-    pub fn print(&self, text: &str, pos: Coords, color: COLORREF) {
+    pub fn print(&self, text: &str, pos: Point, color: COLORREF) {
         unsafe {
             let hdc = GetDC(self.hwnd);
 
@@ -253,8 +239,8 @@ impl Window {
 
             TextOutW(
                 hdc,
-                pos.x,
-                pos.y,
+                pos.0,
+                pos.1,
                 OsStr::new(text)
                     .encode_wide()
                     .collect::<Vec<u16>>()
@@ -266,12 +252,12 @@ impl Window {
         }
     }
 
-    pub fn line(&self, start: Coords, end: Coords) {
+    pub fn line(&self, start: Point, end: Point) {
         unsafe {
             let hdc = GetDC(self.hwnd);
 
-            MoveToEx(hdc, start.x, start.y, null_mut());
-            LineTo(hdc, end.x, end.y);
+            MoveToEx(hdc, start.0, start.1, null_mut());
+            LineTo(hdc, end.0, end.1);
 
             ReleaseDC(self.hwnd, hdc);
         }
@@ -285,10 +271,7 @@ pub unsafe extern "system" fn win_proc(
     lparam: LPARAM,
 ) -> LRESULT {
     match msg {
-        WM_MOUSEMOVE => {
-            MOUSE_POS.x = GET_X_LPARAM(lparam);
-            MOUSE_POS.y = GET_Y_LPARAM(lparam);
-        }
+        WM_MOUSEMOVE => MOUSE_POS = (GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)),
         WM_LBUTTONDOWN | WM_LBUTTONDBLCLK => KEYS[VK_LBUTTON as usize] = true,
         WM_MBUTTONDOWN | WM_MBUTTONDBLCLK => KEYS[VK_MBUTTON as usize] = true,
         WM_RBUTTONDOWN | WM_RBUTTONDBLCLK => KEYS[VK_RBUTTON as usize] = true,

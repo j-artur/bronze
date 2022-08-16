@@ -1,18 +1,12 @@
 pub mod engine;
 
-use engine::{
-    engine::*,
-    game::Game,
-    resources::*,
-    window::Window,
-    window::{coords, Coords},
-};
+use engine::{engine::*, game::*, resources::*, window::*};
 use winapi::um::wingdi::RGB;
-use winapi::um::winuser::*;
+use winapi::um::winuser::VK_ESCAPE;
 
 struct P {
-    pos: Coords,
-    speed: Coords,
+    pos: Point,
+    speed: Size,
 }
 
 pub struct WinGame<'a> {
@@ -32,12 +26,12 @@ impl<'a> WinGame<'a> {
             mode_text: String::new(),
             mouse_text: String::new(),
             p1: P {
-                pos: coords!(0, 0),
-                speed: coords!(15, 11),
+                pos: (0, 0),
+                speed: (15, 11),
             },
             p2: P {
-                pos: coords!(0, 0),
-                speed: coords!(9, 13),
+                pos: (0, 0),
+                speed: (9, 13),
             },
         }
     }
@@ -45,7 +39,8 @@ impl<'a> WinGame<'a> {
 
 impl<'a> Game for WinGame<'a> {
     fn init(&mut self) {
-        self.size_text = format!("Size: {} x {}", self.window.size().x, self.window.size().y);
+        let (w, h) = self.window.size();
+        self.size_text = format!("Size: {} x {}", w, h);
         self.mode_text = format!("Mode: {:?}", self.window.mode());
     }
 
@@ -54,38 +49,34 @@ impl<'a> Game for WinGame<'a> {
             self.window.close();
         }
 
-        let Coords { x, y } = self.window.mouse();
+        let (x, y) = self.window.mouse();
         self.mouse_text = format!("Mouse: {} x {}", x, y);
 
-        if self.p1.pos.x < 0 || self.p1.pos.x > self.window.width() {
-            self.p1.speed.x = -self.p1.speed.x;
+        if self.p1.pos.0 < 0 || self.p1.pos.0 > self.window.width() {
+            self.p1.speed.0 = -self.p1.speed.0;
         }
-        if self.p1.pos.y < 0 || self.p1.pos.y > self.window.height() {
-            self.p1.speed.y = -self.p1.speed.y;
+        if self.p1.pos.1 < 0 || self.p1.pos.1 > self.window.height() {
+            self.p1.speed.1 = -self.p1.speed.1;
         }
-        if self.p2.pos.x < 0 || self.p2.pos.x > self.window.width() {
-            self.p2.speed.x = -self.p2.speed.x;
+        if self.p2.pos.0 < 0 || self.p2.pos.0 > self.window.width() {
+            self.p2.speed.0 = -self.p2.speed.0;
         }
-        if self.p2.pos.y < 0 || self.p2.pos.y > self.window.height() {
-            self.p2.speed.y = -self.p2.speed.y;
+        if self.p2.pos.1 < 0 || self.p2.pos.1 > self.window.height() {
+            self.p2.speed.1 = -self.p2.speed.1;
         }
 
-        self.p1.pos.x += self.p1.speed.x;
-        self.p1.pos.y += self.p1.speed.y;
-        self.p2.pos.x += self.p2.speed.x;
-        self.p2.pos.y += self.p2.speed.y;
+        self.p1.pos.0 += self.p1.speed.0;
+        self.p1.pos.1 += self.p1.speed.1;
+        self.p2.pos.0 += self.p2.speed.0;
+        self.p2.pos.1 += self.p2.speed.1;
     }
 
     fn render(&mut self) {
         self.window
-            .print("Window Game Demo", coords!(10, 10), RGB(0, 0, 0));
-        self.window
-            .print(&self.size_text, coords!(10, 50), RGB(0, 0, 0));
-        self.window
-            .print(&self.mode_text, coords!(10, 70), RGB(0, 0, 0));
-        self.window
-            .print(&self.mouse_text, coords!(10, 90), RGB(0, 0, 0));
-
+            .print("Window Game Demo", (10, 10), RGB(0, 0, 0));
+        self.window.print(&self.size_text, (10, 50), RGB(0, 0, 0));
+        self.window.print(&self.mode_text, (10, 70), RGB(0, 0, 0));
+        self.window.print(&self.mouse_text, (10, 90), RGB(0, 0, 0));
         self.window.line(self.p1.pos, self.p2.pos);
     }
 
@@ -99,7 +90,7 @@ fn main() {
     window.set_icon(IDI_ICON);
     window.set_cursor(IDC_CURSOR);
     window.set_mode(Windowed);
-    window.set_size(coords!(960, 540));
+    window.set_size((960, 540));
     window.set_bg(RGB(240, 240, 160));
     window.create();
 
