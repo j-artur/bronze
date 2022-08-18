@@ -5,6 +5,8 @@ use winapi::shared::{minwindef::*, windef::*, windowsx::*};
 use winapi::um::{libloaderapi::*, wingdi::*, winuser::*};
 use WindowMode::*;
 
+use super::graphics::{rgb, Color};
+
 static mut KEYS: [bool; 256] = [false; 256];
 static mut MOUSE_POS: Point = (0, 0);
 
@@ -23,7 +25,7 @@ pub struct Window {
     size: Size,
     icon: HICON,
     cursor: HCURSOR,
-    bg_color: COLORREF,
+    bg_color: Color,
     title: String,
     style: DWORD,
     mode: WindowMode,
@@ -32,7 +34,7 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new(title: &str) -> Window {
+    pub fn new() -> Window {
         unsafe {
             Window {
                 hinstance: GetModuleHandleW(null()),
@@ -40,8 +42,8 @@ impl Window {
                 size: (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)),
                 icon: LoadIconW(null_mut(), IDI_APPLICATION),
                 cursor: LoadCursorW(null_mut(), IDC_ARROW),
-                bg_color: RGB(0, 0, 0),
-                title: title.to_string(),
+                bg_color: rgb!(0, 0, 0),
+                title: String::new(),
                 style: WS_POPUP | WS_VISIBLE,
                 mode: WindowMode::Fullscreen,
                 pos: (0, 0),
@@ -70,7 +72,10 @@ impl Window {
     }
 
     pub fn create(&mut self) -> bool {
-        let wndclassname: Vec<u16> = OsStr::new("GameWindow\0").encode_wide().collect();
+        let wndclassname: Vec<u16> = OsStr::new("GameWindow")
+            .encode_wide()
+            .chain(Some(0).into_iter())
+            .collect();
 
         let wndclass = WNDCLASSEXW {
             cbSize: size_of::<WNDCLASSEXW>() as UINT,
@@ -81,7 +86,10 @@ impl Window {
             hInstance: self.hinstance,
             hIcon: self.icon,
             hCursor: self.cursor,
-            hbrBackground: unsafe { CreateSolidBrush(self.bg_color) },
+            hbrBackground: {
+                let Color(r, g, b, _) = self.bg_color;
+                unsafe { CreateSolidBrush(RGB(r, g, b)) }
+            },
             lpszMenuName: null(),
             lpszClassName: wndclassname.as_ptr(),
             hIconSm: self.icon,
@@ -221,46 +229,12 @@ impl Window {
         unsafe { MOUSE_POS.1 }
     }
 
-    pub fn bg(&self) -> COLORREF {
+    pub fn bg(&self) -> Color {
         self.bg_color
     }
 
-    pub fn set_bg(&mut self, color: COLORREF) {
+    pub fn set_bg(&mut self, color: Color) {
         self.bg_color = color;
-    }
-
-    pub fn print(&self, text: &str, pos: Point, color: COLORREF) {
-        unsafe {
-            let hdc = GetDC(self.hwnd);
-
-            SetTextColor(hdc, color);
-
-            SetBkMode(hdc, TRANSPARENT.try_into().unwrap());
-
-            TextOutW(
-                hdc,
-                pos.0,
-                pos.1,
-                OsStr::new(text)
-                    .encode_wide()
-                    .collect::<Vec<u16>>()
-                    .as_ptr(),
-                text.len() as i32,
-            );
-
-            ReleaseDC(self.hwnd, hdc);
-        }
-    }
-
-    pub fn line(&self, start: Point, end: Point) {
-        unsafe {
-            let hdc = GetDC(self.hwnd);
-
-            MoveToEx(hdc, start.0, start.1, null_mut());
-            LineTo(hdc, end.0, end.1);
-
-            ReleaseDC(self.hwnd, hdc);
-        }
     }
 }
 
