@@ -13,7 +13,7 @@ The code will change as the course progresses, updating to the closest to the wh
 - [x] 4: Architecture of a Game
 - [x] 5: Game Engine
 - [x] 6: Direct3D
-- [ ] 7: Refresh Rate
+- [x] 7: Refresh Rate
 - [ ] 8: Sprite Rendering
 - [ ] 9: Scene Manager
 - [ ] 10: Collision Detection

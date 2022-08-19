@@ -1,16 +1,16 @@
 pub mod engine;
 
-use engine::{engine::*, game::*, graphics::*, resources::*, window::*};
+use engine::{engine::*, game::*, resources::*, window::*, *};
 
-pub struct D3DGame {}
+pub struct FPSCounter {}
 
-impl D3DGame {
+impl FPSCounter {
     fn new() -> Self {
-        D3DGame {}
+        FPSCounter {}
     }
 }
 
-impl Game for D3DGame {
+impl Game for FPSCounter {
     fn init(&mut self, _: &Window) {}
 
     fn update(&mut self, _: &Window) {}
@@ -25,12 +25,12 @@ use engine::window::WindowMode::*;
 fn main() {
     let mut engine = Engine::new();
 
-    engine.window().set_title("Window Game Demo");
+    engine.window().set_title("FPSCounter");
     engine.window().set_icon(IDI_ICON);
     engine.window().set_cursor(IDC_CURSOR);
     engine.window().set_mode(Windowed);
     engine.window().set_size((960, 540));
     engine.window().set_bg(rgb!(40, 40, 40));
 
-    engine.start(Box::new(D3DGame::new()));
+    engine.start(Box::new(FPSCounter::new()));
 }

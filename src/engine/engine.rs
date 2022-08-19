@@ -1,21 +1,28 @@
-use super::graphics::Graphics;
-use super::{game::Game, window::Window};
-use std::ffi::OsStr;
-use std::os::windows::prelude::OsStrExt;
-use std::{ptr::null_mut, thread::sleep, time::Duration};
-use winapi::shared::windef::*;
-use winapi::um::winuser::*;
+use std::ptr::null_mut;
+use winapi::um::{timeapi::*, winuser::*};
+
+use super::{game::Game, graphics::Graphics, timer::Timer, u16str, window::Window};
+
+static mut TOTAL_TIME: f64 = 0.0;
+static mut FRAME_COUNT: u32 = 0;
 
 pub struct Engine {
     window: Window,
     graphics: Graphics,
+    timer: Timer,
+    paused: bool,
+    frame_time: f64,
 }
 
 impl Engine {
     pub fn new() -> Self {
-        let window = Window::new();
-        let graphics = Graphics::new();
-        Engine { window, graphics }
+        Engine {
+            window: Window::new(),
+            graphics: Graphics::new(),
+            timer: Timer::new(),
+            paused: false,
+            frame_time: 0.0,
+        }
     }
 
     pub fn window(&mut self) -> &mut Window {
@@ -27,16 +34,8 @@ impl Engine {
             unsafe {
                 MessageBoxW(
                     null_mut(),
-                    OsStr::new("Failed to create window")
-                        .encode_wide()
-                        .chain(Some(0).into_iter())
-                        .collect::<Vec<u16>>()
-                        .as_ptr(),
-                    OsStr::new("Error")
-                        .encode_wide()
-                        .chain(Some(0).into_iter())
-                        .collect::<Vec<u16>>()
-                        .as_ptr(),
+                    u16str!("Failed to create window"),
+                    u16str!("Error"),
                     MB_OK | MB_ICONERROR,
                 );
             }
@@ -48,16 +47,8 @@ impl Engine {
             unsafe {
                 MessageBoxW(
                     self.window.hwnd(),
-                    OsStr::new("Failed to create graphics")
-                        .encode_wide()
-                        .chain(Some(0).into_iter())
-                        .collect::<Vec<u16>>()
-                        .as_ptr(),
-                    OsStr::new("Error")
-                        .encode_wide()
-                        .chain(Some(0).into_iter())
-                        .collect::<Vec<u16>>()
-                        .as_ptr(),
+                    u16str!("Failed to create graphics"),
+                    u16str!("Error"),
                     MB_OK | MB_ICONERROR,
                 );
             }
@@ -65,40 +56,98 @@ impl Engine {
             return;
         }
 
-        self.game_loop(level)
+        unsafe { timeBeginPeriod(1) };
+
+        self.game_loop(level);
+
+        unsafe { timeEndPeriod(1) };
+    }
+
+    pub fn pause(&mut self) {
+        self.paused = true;
+        self.timer.stop();
+    }
+
+    pub fn resume(&mut self) {
+        self.paused = false;
+        self.timer.start();
     }
 
     pub fn game_loop(&mut self, mut game: Box<dyn Game>) {
+        self.timer.start();
+
         game.init(&self.window);
 
-        let mut msg = MSG {
-            hwnd: null_mut(),
-            message: 0,
-            wParam: 0,
-            lParam: 0,
-            time: 0,
-            pt: POINT { x: 0, y: 0 },
-        };
+        let mut pause_key_control = true;
 
-        while msg.message != WM_QUIT {
-            if unsafe { PeekMessageW(&mut msg, null_mut(), 0, 0, PM_REMOVE) } != 0 {
-                unsafe {
+        unsafe {
+            let mut msg: MSG = std::mem::zeroed();
+
+            while msg.message != WM_QUIT {
+                if PeekMessageW(&mut msg, null_mut(), 0, 0, PM_REMOVE) != 0 {
                     TranslateMessage(&mut msg);
                     DispatchMessageW(&mut msg);
+                } else {
+                    if pause_key_control {
+                        if self.window.key_down(VK_PAUSE as u8) {
+                            self.paused = !self.paused;
+                            pause_key_control = false;
+
+                            if self.paused {
+                                self.timer.stop();
+                            } else {
+                                self.timer.start();
+                            }
+                        }
+                    } else {
+                        if !self.window.key_up(VK_PAUSE as u8) {
+                            pause_key_control = true;
+                        }
+                    }
+
+                    if !self.paused {
+                        self.frame_time = self.frame_time();
+
+                        game.update(&self.window);
+
+                        self.graphics.clear();
+
+                        game.render(&self.window);
+
+                        self.graphics.present();
+                    } else {
+                        game.on_pause();
+                    }
                 }
-            } else {
-                game.update(&self.window);
-
-                self.graphics.clear();
-
-                game.render(&self.window);
-
-                self.graphics.present();
-
-                sleep(Duration::from_millis(1000 / 60));
             }
         }
 
         game.finalize();
+    }
+
+    fn frame_time(&mut self) -> f64 {
+        let frame_time = self.timer.reset();
+
+        if cfg!(debug_assertions) {
+            unsafe {
+                TOTAL_TIME += frame_time;
+                FRAME_COUNT += 1;
+
+                if TOTAL_TIME >= 1.0 {
+                    let title = format!(
+                        "{} - FPS: {} - Frame Time: {:.4}ms",
+                        self.window.title(),
+                        FRAME_COUNT,
+                        frame_time * 1000.0
+                    );
+                    SetWindowTextW(self.window.hwnd(), u16str!(&title));
+
+                    FRAME_COUNT = 0;
+                    TOTAL_TIME -= 1.0;
+                }
+            }
+        }
+
+        frame_time
     }
 }

@@ -1,11 +1,9 @@
-use std::os::windows::prelude::OsStrExt;
 use std::ptr::{null, null_mut};
-use std::{ffi::OsStr, mem::size_of, process::exit};
+use std::{mem::size_of, process::exit};
 use winapi::shared::{minwindef::*, windef::*, windowsx::*};
 use winapi::um::{libloaderapi::*, wingdi::*, winuser::*};
-use WindowMode::*;
 
-use super::graphics::{rgb, Color};
+use super::{rgb, u16str, Color};
 
 static mut KEYS: [bool; 256] = [false; 256];
 static mut MOUSE_POS: Point = (0, 0);
@@ -18,6 +16,8 @@ pub enum WindowMode {
     Windowed,
     Fullscreen,
 }
+
+use WindowMode::*;
 
 pub struct Window {
     hinstance: HINSTANCE,
@@ -34,7 +34,7 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new() -> Window {
+    pub fn new() -> Self {
         unsafe {
             Window {
                 hinstance: GetModuleHandleW(null()),
@@ -72,10 +72,7 @@ impl Window {
     }
 
     pub fn create(&mut self) -> bool {
-        let wndclassname: Vec<u16> = OsStr::new("GameWindow")
-            .encode_wide()
-            .chain(Some(0).into_iter())
-            .collect();
+        let wndclassname = u16str!("GameWindow");
 
         let wndclass = WNDCLASSEXW {
             cbSize: size_of::<WNDCLASSEXW>() as UINT,
@@ -91,7 +88,7 @@ impl Window {
                 unsafe { CreateSolidBrush(RGB(r, g, b)) }
             },
             lpszMenuName: null(),
-            lpszClassName: wndclassname.as_ptr(),
+            lpszClassName: wndclassname,
             hIconSm: self.icon,
         };
 
@@ -102,12 +99,8 @@ impl Window {
         self.hwnd = unsafe {
             CreateWindowExW(
                 0,
-                wndclassname.as_ptr(),
-                OsStr::new(&self.title)
-                    .encode_wide()
-                    .chain(Some(0).into_iter())
-                    .collect::<Vec<u16>>()
-                    .as_ptr(),
+                wndclassname,
+                u16str!(&self.title),
                 self.style,
                 self.pos.0,
                 self.pos.1,
@@ -134,15 +127,13 @@ impl Window {
                     GetWindowLongW(self.hwnd, GWL_STYLE) as DWORD,
                     (GetMenu(self.hwnd) != null_mut()).into(),
                     GetWindowLongW(self.hwnd, GWL_EXSTYLE) as DWORD,
-                )
-            };
+                );
 
-            self.pos = (
-                (unsafe { GetSystemMetrics(SM_CXSCREEN) } - rect.right + rect.left) / 2,
-                (unsafe { GetSystemMetrics(SM_CYSCREEN) } - rect.bottom + rect.top) / 2,
-            );
+                self.pos = (
+                    (GetSystemMetrics(SM_CXSCREEN) - rect.right + rect.left) / 2,
+                    (GetSystemMetrics(SM_CYSCREEN) - rect.bottom + rect.top) / 2,
+                );
 
-            unsafe {
                 MoveWindow(
                     self.hwnd,
                     self.pos.0,
@@ -150,7 +141,7 @@ impl Window {
                     rect.right - rect.left,
                     rect.bottom - rect.top,
                     1,
-                )
+                );
             };
         }
 
