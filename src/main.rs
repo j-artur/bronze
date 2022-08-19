@@ -1,6 +1,9 @@
 pub mod engine;
 
-use engine::{engine::*, game::*, resources::*, window::*, *};
+use engine::context::Context;
+use engine::window::{Window, WindowMode::*};
+use engine::{engine::*, game::*, resources::*, *};
+use winapi::um::winuser::VK_ESCAPE;
 
 pub struct FPSCounter {}
 
@@ -11,16 +14,18 @@ impl FPSCounter {
 }
 
 impl Game for FPSCounter {
-    fn init(&mut self, _: &Window) {}
+    fn init(&mut self, _: &mut Window) {}
 
-    fn update(&mut self, _: &Window) {}
+    fn update(&mut self, ctx: Context) {
+        if ctx.window.key_down(VK_ESCAPE as u8) {
+            ctx.window.close();
+        }
+    }
 
-    fn render(&mut self, _: &Window) {}
+    fn render(&mut self, _: Context) {}
 
     fn finalize(&mut self) {}
 }
-
-use engine::window::WindowMode::*;
 
 fn main() {
     let mut engine = Engine::new();

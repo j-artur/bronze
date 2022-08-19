@@ -1,5 +1,6 @@
+use std::mem::size_of;
+use std::process::exit;
 use std::ptr::{null, null_mut};
-use std::{mem::size_of, process::exit};
 use winapi::shared::{minwindef::*, windef::*, windowsx::*};
 use winapi::um::{libloaderapi::*, wingdi::*, winuser::*};
 
@@ -20,8 +21,8 @@ pub enum WindowMode {
 use WindowMode::*;
 
 pub struct Window {
-    hinstance: HINSTANCE,
-    hwnd: HWND,
+    instance: HINSTANCE,
+    handle: HWND,
     size: Size,
     icon: HICON,
     cursor: HCURSOR,
@@ -37,8 +38,8 @@ impl Window {
     pub fn new() -> Self {
         unsafe {
             Window {
-                hinstance: GetModuleHandleW(null()),
-                hwnd: null_mut(),
+                instance: GetModuleHandleW(null()),
+                handle: null_mut(),
                 size: (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)),
                 icon: LoadIconW(null_mut(), IDI_APPLICATION),
                 cursor: LoadCursorW(null_mut(), IDC_ARROW),
@@ -52,25 +53,6 @@ impl Window {
         }
     }
 
-    pub fn set_size(&mut self, size: Size) {
-        self.size = size;
-
-        self.center = (size.0 / 2, size.1 / 2);
-
-        self.pos = (
-            (unsafe { GetSystemMetrics(SM_CXSCREEN) } - self.size.0) / 2,
-            (unsafe { GetSystemMetrics(SM_CYSCREEN) } - self.size.1) / 2,
-        );
-    }
-
-    pub fn set_mode(&mut self, mode: WindowMode) {
-        self.mode = mode;
-        self.style = match mode {
-            Windowed => WS_OVERLAPPED | WS_SYSMENU | WS_VISIBLE,
-            Fullscreen => WS_EX_TOPMOST | WS_POPUP | WS_VISIBLE,
-        }
-    }
-
     pub fn create(&mut self) -> bool {
         let wndclassname = u16str!("GameWindow");
 
@@ -80,7 +62,7 @@ impl Window {
             lpfnWndProc: Some(win_proc),
             cbClsExtra: 0,
             cbWndExtra: 0,
-            hInstance: self.hinstance,
+            hInstance: self.instance,
             hIcon: self.icon,
             hCursor: self.cursor,
             hbrBackground: {
@@ -96,7 +78,7 @@ impl Window {
             return false;
         }
 
-        self.hwnd = unsafe {
+        self.handle = unsafe {
             CreateWindowExW(
                 0,
                 wndclassname,
@@ -108,7 +90,7 @@ impl Window {
                 self.size.1,
                 null_mut(),
                 null_mut(),
-                self.hinstance,
+                self.instance,
                 null_mut(),
             )
         };
@@ -124,9 +106,9 @@ impl Window {
             unsafe {
                 AdjustWindowRectEx(
                     &mut rect,
-                    GetWindowLongW(self.hwnd, GWL_STYLE) as DWORD,
-                    (GetMenu(self.hwnd) != null_mut()).into(),
-                    GetWindowLongW(self.hwnd, GWL_EXSTYLE) as DWORD,
+                    GetWindowLongW(self.handle, GWL_STYLE) as DWORD,
+                    (GetMenu(self.handle) != null_mut()).into(),
+                    GetWindowLongW(self.handle, GWL_EXSTYLE) as DWORD,
                 );
 
                 self.pos = (
@@ -135,7 +117,7 @@ impl Window {
                 );
 
                 MoveWindow(
-                    self.hwnd,
+                    self.handle,
                     self.pos.0,
                     self.pos.1,
                     rect.right - rect.left,
@@ -145,15 +127,15 @@ impl Window {
             };
         }
 
-        self.hwnd != null_mut()
+        self.handle != null_mut()
     }
 
-    pub fn hinstance(&self) -> HINSTANCE {
-        self.hinstance
+    pub fn instance(&self) -> HINSTANCE {
+        self.instance
     }
 
-    pub fn hwnd(&self) -> HWND {
-        self.hwnd
+    pub fn handle(&self) -> HWND {
+        self.handle
     }
 
     pub fn size(&self) -> Size {
@@ -168,12 +150,35 @@ impl Window {
         self.size.1
     }
 
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
+
+        self.center = (size.0 / 2, size.1 / 2);
+
+        self.pos = (
+            (unsafe { GetSystemMetrics(SM_CXSCREEN) } - self.size.0) / 2,
+            (unsafe { GetSystemMetrics(SM_CYSCREEN) } - self.size.1) / 2,
+        );
+    }
+
     pub fn set_icon(&mut self, icon: u16) {
         self.icon = unsafe { LoadIconW(GetModuleHandleW(null()), MAKEINTRESOURCEW(icon)) };
     }
 
     pub fn set_cursor(&mut self, cursor: u16) {
         self.cursor = unsafe { LoadCursorW(GetModuleHandleW(null()), MAKEINTRESOURCEW(cursor)) };
+    }
+
+    pub fn bg(&self) -> Color {
+        self.bg_color
+    }
+
+    pub fn set_bg(&mut self, color: Color) {
+        self.bg_color = color;
+    }
+
+    pub fn title(&self) -> &str {
+        &self.title
     }
 
     pub fn set_title(&mut self, title: &str) {
@@ -184,20 +189,16 @@ impl Window {
         self.mode
     }
 
+    pub fn set_mode(&mut self, mode: WindowMode) {
+        self.mode = mode;
+        self.style = match mode {
+            Windowed => WS_OVERLAPPED | WS_SYSMENU | WS_VISIBLE,
+            Fullscreen => WS_EX_TOPMOST | WS_POPUP | WS_VISIBLE,
+        }
+    }
+
     pub fn center(&self) -> Point {
         self.center
-    }
-
-    pub fn title(&self) -> &str {
-        &self.title
-    }
-
-    pub fn hide_cursor(&self, hide: bool) {
-        unsafe { ShowCursor(!hide as BOOL) };
-    }
-
-    pub fn close(&self) {
-        unsafe { PostMessageW(self.hwnd, WM_DESTROY, 0, 0) };
     }
 
     pub fn key_down(&self, key: u8) -> bool {
@@ -220,12 +221,12 @@ impl Window {
         unsafe { MOUSE_POS.1 }
     }
 
-    pub fn bg(&self) -> Color {
-        self.bg_color
+    pub fn hide_cursor(&self, hide: bool) {
+        unsafe { ShowCursor(!hide as BOOL) };
     }
 
-    pub fn set_bg(&mut self, color: Color) {
-        self.bg_color = color;
+    pub fn close(&self) {
+        unsafe { PostMessageW(self.handle, WM_DESTROY, 0, 0) };
     }
 }
 

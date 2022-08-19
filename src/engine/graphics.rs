@@ -6,17 +6,6 @@ use winapi::Interface;
 use super::window::{Window, WindowMode::*};
 use super::Color;
 
-static mut DEVICE: *mut ID3D11Device = null_mut();
-static mut CONTEXT: *mut ID3D11DeviceContext = null_mut();
-static mut VIEWPORT: D3D11_VIEWPORT = D3D11_VIEWPORT {
-    TopLeftX: 0.0,
-    TopLeftY: 0.0,
-    Width: 0.0,
-    Height: 0.0,
-    MinDepth: 0.0,
-    MaxDepth: 1.0,
-};
-
 pub struct Graphics {
     swap_chain: *mut IDXGISwapChain,
     render_target_view: *mut ID3D11RenderTargetView,
@@ -24,6 +13,9 @@ pub struct Graphics {
     feature_level: D3D_FEATURE_LEVEL,
     bg_color: [f32; 4],
     v_sync: bool,
+    device: *mut ID3D11Device,
+    context: *mut ID3D11DeviceContext,
+    viewport: D3D11_VIEWPORT,
 }
 
 impl Graphics {
@@ -35,6 +27,16 @@ impl Graphics {
             feature_level: D3D_FEATURE_LEVEL_11_0,
             bg_color: [0.0, 0.0, 0.0, 0.0],
             v_sync: false,
+            device: null_mut(),
+            context: null_mut(),
+            viewport: D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: 0.0,
+                Height: 0.0,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            },
         }
     }
 
@@ -56,9 +58,9 @@ impl Graphics {
                 null_mut(),
                 0,
                 D3D11_SDK_VERSION,
-                &mut DEVICE,
+                &mut self.device,
                 &mut self.feature_level,
-                &mut CONTEXT,
+                &mut self.context,
             )) {
                 if FAILED(D3D11CreateDevice(
                     null_mut(),
@@ -68,9 +70,9 @@ impl Graphics {
                     null_mut(),
                     0,
                     D3D11_SDK_VERSION,
-                    &mut DEVICE,
+                    &mut self.device,
                     &mut self.feature_level,
-                    &mut CONTEXT,
+                    &mut self.context,
                 )) {
                     return false;
                 }
@@ -93,7 +95,7 @@ impl Graphics {
 
             let mut dxgi_device: *mut IDXGIDevice = null_mut();
             if FAILED(
-                (*DEVICE)
+                (*self.device)
                     .QueryInterface(&IDXGIDevice::uuidof(), &mut dxgi_device as *mut _ as *mut _),
             ) {
                 return false;
@@ -135,21 +137,21 @@ impl Graphics {
                 },
                 BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
                 BufferCount: 2,
-                OutputWindow: window.hwnd(),
-                Windowed: !matches!(window.mode(), Fullscreen) as i32,
+                OutputWindow: window.handle(),
+                Windowed: (window.mode() != Fullscreen) as i32,
                 SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
                 Flags: DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH,
             };
 
             if FAILED((*dxgi_factory).CreateSwapChain(
-                DEVICE as *mut _,
+                self.device as *mut _,
                 &mut swap_chain_desc,
                 &mut self.swap_chain,
             )) {
                 return false;
             }
 
-            if FAILED((*dxgi_factory).MakeWindowAssociation(window.hwnd(), 1 << 1)) {
+            if FAILED((*dxgi_factory).MakeWindowAssociation(window.handle(), 1 << 1)) {
                 return false;
             }
 
@@ -164,7 +166,7 @@ impl Graphics {
                 return false;
             }
 
-            if FAILED((*DEVICE).CreateRenderTargetView(
+            if FAILED((*self.device).CreateRenderTargetView(
                 back_buffer as *mut _,
                 null_mut(),
                 &mut self.render_target_view,
@@ -172,14 +174,14 @@ impl Graphics {
                 return false;
             }
 
-            (*CONTEXT).OMSetRenderTargets(1, &mut self.render_target_view, null_mut());
+            (*self.context).OMSetRenderTargets(1, &mut self.render_target_view, null_mut());
 
             // Viewport / Rasterizer
 
-            VIEWPORT.Width = window.width() as f32;
-            VIEWPORT.Height = window.height() as f32;
+            self.viewport.Width = window.width() as f32;
+            self.viewport.Height = window.height() as f32;
 
-            (*CONTEXT).RSSetViewports(1, &VIEWPORT);
+            (*self.context).RSSetViewports(1, &self.viewport);
 
             // Blend State
 
@@ -198,7 +200,7 @@ impl Graphics {
                 }; 8],
             };
 
-            if FAILED((*DEVICE).CreateBlendState(&blend_state_desc, &mut self.blend_state)) {
+            if FAILED((*self.device).CreateBlendState(&blend_state_desc, &mut self.blend_state)) {
                 return false;
             }
 
@@ -219,14 +221,14 @@ impl Graphics {
 
     pub fn clear(&mut self) {
         unsafe {
-            (*CONTEXT).ClearRenderTargetView(self.render_target_view, &self.bg_color);
+            (*self.context).ClearRenderTargetView(self.render_target_view, &self.bg_color);
         }
     }
 
     pub fn present(&mut self) {
         unsafe {
             (*self.swap_chain).Present(self.v_sync as u32, 0);
-            (*CONTEXT).OMSetRenderTargets(1, &self.render_target_view, null_mut());
+            (*self.context).OMSetRenderTargets(1, &self.render_target_view, null_mut());
         }
     }
 }
@@ -250,15 +252,15 @@ impl Drop for Graphics {
                 self.swap_chain = null_mut();
             }
 
-            if !CONTEXT.is_null() {
-                (*CONTEXT).ClearState();
-                (*CONTEXT).Release();
-                CONTEXT = null_mut();
+            if !self.context.is_null() {
+                (*self.context).ClearState();
+                (*self.context).Release();
+                self.context = null_mut();
             }
 
-            if !DEVICE.is_null() {
-                (*DEVICE).Release();
-                DEVICE = null_mut();
+            if !self.device.is_null() {
+                (*self.device).Release();
+                self.device = null_mut();
             }
         }
     }
