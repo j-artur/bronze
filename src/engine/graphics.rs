@@ -12,7 +12,7 @@ pub struct Graphics {
     blend_state: *mut ID3D11BlendState,
     feature_level: D3D_FEATURE_LEVEL,
     bg_color: [f32; 4],
-    v_sync: bool,
+    vsync: bool,
     device: *mut ID3D11Device,
     context: *mut ID3D11DeviceContext,
     viewport: D3D11_VIEWPORT,
@@ -26,7 +26,7 @@ impl Graphics {
             blend_state: null_mut(),
             feature_level: D3D_FEATURE_LEVEL_11_0,
             bg_color: [0.0, 0.0, 0.0, 0.0],
-            v_sync: false,
+            vsync: false,
             device: null_mut(),
             context: null_mut(),
             viewport: D3D11_VIEWPORT {
@@ -215,8 +215,8 @@ impl Graphics {
         true
     }
 
-    pub fn set_v_sync(&mut self, v_sync: bool) {
-        self.v_sync = v_sync;
+    pub fn use_vsync(&mut self, vsync: bool) {
+        self.vsync = vsync;
     }
 
     pub fn clear(&mut self) {
@@ -227,7 +227,7 @@ impl Graphics {
 
     pub fn present(&mut self) {
         unsafe {
-            (*self.swap_chain).Present(self.v_sync as u32, 0);
+            (*self.swap_chain).Present(self.vsync as u32, 0);
             (*self.context).OMSetRenderTargets(1, &self.render_target_view, null_mut());
         }
     }

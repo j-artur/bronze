@@ -37,5 +37,7 @@ fn main() {
     engine.window().set_size((960, 540));
     engine.window().set_bg(rgb!(40, 40, 40));
 
+    engine.graphics().use_vsync(true);
+
     engine.start(Box::new(FPSCounter::new()));
 }

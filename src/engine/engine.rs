@@ -122,6 +122,10 @@ impl Engine {
         &mut self.window
     }
 
+    pub fn graphics(&mut self) -> &mut Graphics {
+        &mut self.graphics
+    }
+
     pub fn pause(&mut self) {
         self.paused = true;
         self.timer.stop();
