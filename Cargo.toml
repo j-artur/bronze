@@ -2,22 +2,8 @@
 name = "bronze"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-winapi = { version = "0.3.9", features = [
-    "d3d11",
-    "dxgi",
-    "libloaderapi",
-    "profileapi",
-    "timeapi",
-    "windowsx",
-    "winerror",
-    "winnt",
-    "winuser",
-] }
-
-[build-dependencies]
-embed-resource = "1.7.3"
+sfml = "0.19.0"

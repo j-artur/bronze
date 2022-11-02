@@ -1,16 +1,27 @@
-use std::thread::sleep;
 use std::time::Duration;
 
-use super::context::Context;
-use super::window::Window;
+use super::{engine::Engine, input::InputManager, window::Canvas};
 
 pub trait Game {
-    fn init(&mut self, window: &mut Window);
-    fn update(&mut self, ctx: Context);
-    fn render(&mut self, ctx: Context);
-    fn finalize(&mut self);
+    fn is_running(&self) -> bool;
 
-    fn on_pause(&mut self) {
-        sleep(Duration::from_millis(10));
+    fn input(&mut self, input: &InputManager) {
+        let _ = input;
+    }
+
+    fn pre_update(&mut self, engine: &Engine) {
+        let _ = engine;
+    }
+
+    fn update(&mut self, engine: &mut Engine, frame_time: Duration) {
+        let _ = (engine, frame_time);
+    }
+
+    fn post_update(&mut self, engine: &Engine) {
+        let _ = engine;
+    }
+
+    fn draw<C: Canvas>(&self, target: &mut C) {
+        let _ = target;
     }
 }

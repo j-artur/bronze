@@ -1,43 +1,96 @@
+use std::time::Duration;
+
+use engine::{
+    cursor::Cursor, debugger::Debugger, icon::Icon, input::InputManager, window::WindowConfig,
+};
+use sfml::{
+    graphics::{Color, Font, RectangleShape, Shape, Transformable},
+    window::Key,
+};
+
+use crate::engine::{
+    engine::Engine,
+    game::Game,
+    window::{Canvas, Window},
+};
+
 pub mod engine;
 
-use engine::context::Context;
-use engine::window::{Window, WindowMode::*};
-use engine::{engine::*, game::*, resources::*, *};
-use winapi::um::winuser::VK_ESCAPE;
+pub struct MyGame<'a> {
+    rectangle: RectangleShape<'a>,
+    debugger: Debugger<'a>,
+    running: bool,
+}
 
-pub struct FPSCounter {}
-
-impl FPSCounter {
+impl<'a> MyGame<'a> {
     fn new() -> Self {
-        FPSCounter {}
+        let mut rectangle = RectangleShape::new();
+        rectangle.set_size((100.0, 100.0));
+        rectangle.set_fill_color(Color::RED);
+        rectangle.set_position((100.0, 100.0));
+
+        let font_path = "assets/fonts/JetBrainsMono[wght].ttf";
+
+        let font =
+            Font::from_file(font_path).expect(&format!("Failed to load font in \"{}\"", font_path));
+
+        MyGame {
+            rectangle,
+            debugger: Debugger::new(true, font, 10),
+            running: true,
+        }
     }
 }
 
-impl Game for FPSCounter {
-    fn init(&mut self, _: &mut Window) {}
-
-    fn update(&mut self, ctx: Context) {
-        if ctx.window.key_down(VK_ESCAPE as u8) {
-            ctx.window.close();
-        }
+impl<'a> Game for MyGame<'a> {
+    fn is_running(&self) -> bool {
+        self.running
     }
 
-    fn render(&mut self, _: Context) {}
+    fn input(&mut self, input: &InputManager) {
+        if input.key_down(Key::Escape) {
+            self.running = false;
+        }
+        self.debugger.input(input);
+    }
 
-    fn finalize(&mut self) {}
+    fn update(&mut self, engine: &mut Engine, delta: Duration) {
+        if engine.input().key_down(Key::Left) {
+            self.rectangle.move_((-200.0 * delta.as_secs_f32(), 0.0));
+        }
+
+        if engine.input().key_down(Key::Right) {
+            self.rectangle.move_((200.0 * delta.as_secs_f32(), 0.0));
+        }
+
+        if engine.input().key_down(Key::Up) {
+            self.rectangle.move_((0.0, -200.0 * delta.as_secs_f32()));
+        }
+
+        if engine.input().key_down(Key::Down) {
+            self.rectangle.move_((0.0, 200.0 * delta.as_secs_f32()));
+        }
+
+        self.debugger.update(engine, delta);
+    }
+
+    fn draw<C: Canvas>(&self, target: &mut C) {
+        target.draw(&self.rectangle);
+        self.debugger.draw(target);
+    }
 }
 
 fn main() {
-    let mut engine = Engine::new();
+    let win_config = WindowConfig {
+        title: "My Game".to_string(),
+        icon: Icon::from_image("assets/images/icon.png"),
+        cursor: Cursor::from_image("assets/images/cursor.png"),
+        mode: (800, 600).into(),
+        ..WindowConfig::default()
+    };
 
-    engine.window().set_title("FPSCounter");
-    engine.window().set_icon(IDI_ICON);
-    engine.window().set_cursor(IDC_CURSOR);
-    engine.window().set_mode(Windowed);
-    engine.window().set_size((960, 540));
-    engine.window().set_bg(rgb!(40, 40, 40));
+    let mut engine = Engine::new(Window::new(win_config));
 
-    engine.graphics().use_vsync(true);
-
-    engine.start(Box::new(FPSCounter::new()));
+    let game = MyGame::new();
+    engine.run(game);
 }
