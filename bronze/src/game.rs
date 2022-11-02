@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{engine::Engine, input::InputManager, window::Canvas};
+use crate::{engine::Engine, graphics::Canvas, input::InputManager};
 
 pub trait Game {
     fn is_running(&self) -> bool;

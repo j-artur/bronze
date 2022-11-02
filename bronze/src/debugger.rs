@@ -6,7 +6,7 @@ use sfml::{
     SfBox,
 };
 
-use super::{engine::Engine, game::Game, input::InputManager, window::Canvas};
+use crate::{engine::Engine, game::Game, graphics::Canvas, input::InputManager};
 
 pub struct Debugger<'a> {
     on: bool,

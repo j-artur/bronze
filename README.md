@@ -8,6 +8,10 @@ The code will change as the course progresses, updating to the closest to the wh
 
 This means that, in order for it to run correctly, it must meet the requirements set out in the crate instructions.
 
+DLLs are included in the `bronze/include/` folder. There, there is more information on how to run the application on _Windows_.
+
+I don't have any more information regarding other operating systems at the moment.
+
 ## **Classes:**
 
 - [x] 0: Introduction
@@ -16,7 +20,7 @@ This means that, in order for it to run correctly, it must meet the requirements
 - [x] 3: Keyboard and Mouse
 - [x] 4: Architecture of a Game
 - [x] 5: Game Engine
-- [x] 6: ~~Direct3D~~ SFML Rendering
+- [x] 6: ~~Direct3D~~ SFML
 - [x] 7: Refresh Rate
 - [x] 8: Sprite Rendering
 - [ ] 9: Scene Manager

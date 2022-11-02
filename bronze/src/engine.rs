@@ -1,6 +1,6 @@
 use sfml::window::Event;
 
-use super::{game::Game, input::InputManager, timer::Timer, window::Window};
+use crate::{game::Game, input::InputManager, timer::Timer, window::Window};
 
 pub struct Engine {
     window: Window,

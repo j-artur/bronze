@@ -1,4 +1,6 @@
-use sfml::window::{mouse::Button, Event, Key};
+use sfml::window::Event;
+
+pub use sfml::window::{mouse::Button, Key};
 
 pub struct Keyboard {
     pub keys: [bool; 101],

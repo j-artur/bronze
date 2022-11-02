@@ -3,7 +3,7 @@ use sfml::{
     window::{Event, Style, VideoMode},
 };
 
-use super::{cursor::Cursor, icon::Icon};
+use crate::{cursor::Cursor, graphics::Canvas, icon::Icon};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FPSConfig {
@@ -128,10 +128,6 @@ impl Window {
     pub fn close(&mut self) {
         self.sfml_window.close()
     }
-}
-
-pub trait Canvas {
-    fn draw<D: Drawable>(&mut self, drawable: &D);
 }
 
 impl Canvas for Window {

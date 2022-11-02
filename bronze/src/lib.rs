@@ -2,6 +2,7 @@ pub mod cursor;
 pub mod debugger;
 pub mod engine;
 pub mod game;
+pub mod graphics;
 pub mod icon;
 pub mod input;
 pub mod timer;

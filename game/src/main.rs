@@ -1,20 +1,15 @@
 use std::time::Duration;
 
-use engine::{
-    cursor::Cursor, debugger::Debugger, icon::Icon, input::InputManager, window::WindowConfig,
-};
-use sfml::{
-    graphics::{Color, Font, RectangleShape, Shape, Transformable},
-    window::Key,
-};
-
-use crate::engine::{
+use bronze::{
+    cursor::Cursor,
+    debugger::Debugger,
     engine::Engine,
     game::Game,
-    window::{Canvas, Window},
+    graphics::{Canvas, Color, Font, RectangleShape, Shape, Transformable},
+    icon::Icon,
+    input::{InputManager, Key},
+    window::{Window, WindowConfig},
 };
-
-pub mod engine;
 
 pub struct MyGame<'a> {
     rectangle: RectangleShape<'a>,
@@ -32,7 +27,7 @@ impl<'a> MyGame<'a> {
         let font_path = "assets/fonts/JetBrainsMono[wght].ttf";
 
         let font =
-            Font::from_file(font_path).expect(&format!("Failed to load font in \"{}\"", font_path));
+            Font::from_file(font_path).expect(&format!("Failed to load font from {}", font_path));
 
         MyGame {
             rectangle,
