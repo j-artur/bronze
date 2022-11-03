@@ -4,15 +4,19 @@ use strum_macros::EnumIter;
 
 use bronze::{
     cursor::Cursor,
-    debugger::Debugger,
     engine::Engine,
     game::Game,
     graphics::{Canvas, Sprite},
     icon::Icon,
     input::{InputManager, Key},
     resources::{Audio, Font, Image, ResourcePool},
+    sfml::graphics::Color,
     window::{Window, WindowConfig},
 };
+
+mod debugger;
+
+use debugger::Debugger;
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, EnumIter)]
 enum Images {
@@ -71,6 +75,7 @@ fn main() {
         icon: Icon::from_image("assets/images/icon.png"),
         cursor: Cursor::from_image("assets/images/cursor.png"),
         mode: (960, 540).into(),
+        bg_color: Color::BLACK,
         ..WindowConfig::default()
     };
 

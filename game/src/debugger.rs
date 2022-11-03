@@ -1,12 +1,11 @@
 use std::time::Duration;
 
-use sfml::graphics::{Color, Text, Transformable};
-
-use crate::{
+use bronze::{
     engine::Engine,
     graphics::Canvas,
     input::{InputManager, Key},
     resources::Font,
+    sfml::graphics::{Color, Text, Transformable},
 };
 
 pub struct Debugger<'r> {

@@ -1,5 +1,4 @@
 pub mod cursor;
-pub mod debugger;
 pub mod engine;
 pub mod game;
 pub mod graphics;
@@ -8,3 +7,5 @@ pub mod input;
 pub mod resources;
 pub mod timer;
 pub mod window;
+
+pub use sfml;
