@@ -69,7 +69,7 @@ impl<'a> Game for MyGame<'a> {
         self.debugger.update(engine, delta);
     }
 
-    fn draw<C: Canvas>(&self, target: &mut C) {
+    fn draw(&self, target: &mut dyn Canvas) {
         target.draw(&self.rectangle);
         self.debugger.draw(target);
     }

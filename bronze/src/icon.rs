@@ -1,4 +1,4 @@
-use sfml::graphics::Image;
+use crate::graphics::Image;
 
 pub struct Icon {
     image: Image,

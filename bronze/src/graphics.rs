@@ -1,5 +1,5 @@
 pub use sfml::graphics::*;
 
 pub trait Canvas {
-    fn draw<D: Drawable>(&mut self, drawable: &D);
+    fn draw(&mut self, drawable: &dyn Drawable);
 }

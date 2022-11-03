@@ -1,4 +1,6 @@
-use sfml::{graphics::Image, window::Cursor as SfmlCursor, SfBox};
+use sfml::{window::Cursor as SfmlCursor, SfBox};
+
+use crate::graphics::Image;
 
 pub struct Cursor {
     cursor: SfBox<SfmlCursor>,

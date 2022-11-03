@@ -22,7 +22,7 @@ I don't have any more information regarding other operating systems at the momen
 - [x] 5: Game Engine
 - [x] 6: ~~Direct3D~~ SFML
 - [x] 7: Refresh Rate
-- [x] 8: Sprite Rendering
+- [ ] 8: Sprite Rendering
 - [ ] 9: Scene Manager
 - [ ] 10: Collision Detection
 - [ ] 11: **PacMan**

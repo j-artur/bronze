@@ -1,12 +1,13 @@
 use std::time::Duration;
 
-use sfml::{
-    graphics::{Color, Font, Text, Transformable},
-    window::Key,
-    SfBox,
-};
+use sfml::SfBox;
 
-use crate::{engine::Engine, game::Game, graphics::Canvas, input::InputManager};
+use crate::{
+    engine::Engine,
+    game::Game,
+    graphics::{Canvas, Color, Font, Text, Transformable},
+    input::{InputManager, Key},
+};
 
 pub struct Debugger<'a> {
     on: bool,
@@ -61,7 +62,7 @@ impl<'a> Game for Debugger<'a> {
         }
     }
 
-    fn draw<C: Canvas>(&self, target: &mut C) {
+    fn draw(&self, target: &mut dyn Canvas) {
         if self.on {
             target.draw(&self.text);
         }

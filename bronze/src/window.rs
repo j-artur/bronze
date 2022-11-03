@@ -1,18 +1,17 @@
-use sfml::{
-    graphics::{Color, Drawable, RenderTarget, RenderWindow},
-    window::{Event, Style, VideoMode},
+use sfml::window::{Event, Style, VideoMode};
+
+use crate::{
+    cursor::Cursor,
+    graphics::{Canvas, Color, Drawable, RenderTarget, RenderWindow},
+    icon::Icon,
 };
 
-use crate::{cursor::Cursor, graphics::Canvas, icon::Icon};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FPSConfig {
     VSync,
     Unlimited,
     Limited(u32),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WindowMode {
     Fullscreen,
     Windowed { width: u32, height: u32 },
@@ -90,7 +89,7 @@ impl Window {
 
     pub fn set_fps_config(&mut self, config: FPSConfig) {
         self.sfml_window
-            .set_vertical_sync_enabled(config == FPSConfig::VSync);
+            .set_vertical_sync_enabled(matches!(config, FPSConfig::VSync));
         self.sfml_window
             .set_framerate_limit(if let FPSConfig::Limited(limit) = config {
                 limit
@@ -131,7 +130,7 @@ impl Window {
 }
 
 impl Canvas for Window {
-    fn draw<D: Drawable>(&mut self, drawable: &D) {
+    fn draw(&mut self, drawable: &dyn Drawable) {
         self.sfml_window.draw(drawable)
     }
 }
