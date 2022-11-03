@@ -1,12 +1,12 @@
-use crate::graphics::Image;
+use sfml::graphics::Image as SfmlImage;
 
 pub struct Icon {
-    image: Image,
+    image: SfmlImage,
 }
 
 impl Icon {
     pub fn from_image(path: &str) -> Option<Self> {
-        Image::from_file(path)
+        SfmlImage::from_file(path)
             .map(|image| Icon { image })
             .or_else(|| {
                 eprintln!("Failed to load icon from \"{}\"", path);

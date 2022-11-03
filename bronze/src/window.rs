@@ -1,10 +1,9 @@
-use sfml::window::{Event, Style, VideoMode};
-
-use crate::{
-    cursor::Cursor,
-    graphics::{Canvas, Color, Drawable, RenderTarget, RenderWindow},
-    icon::Icon,
+use sfml::{
+    graphics::{Color, Drawable, RenderTarget, RenderWindow},
+    window::{Event, Style, VideoMode},
 };
+
+use crate::{cursor::Cursor, graphics::Canvas, icon::Icon};
 
 pub enum FPSConfig {
     VSync,

@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 bronze = { path = "../bronze" }
+strum = "0.24.1"
+strum_macros = "0.24.3"

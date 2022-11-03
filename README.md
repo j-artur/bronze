@@ -22,13 +22,13 @@ I don't have any more information regarding other operating systems at the momen
 - [x] 5: Game Engine
 - [x] 6: ~~Direct3D~~ SFML
 - [x] 7: Refresh Rate
-- [ ] 8: Sprite Rendering
+- [x] 8: Sprite Rendering
 - [ ] 9: Scene Manager
 - [ ] 10: Collision Detection
 - [ ] 11: **PacMan**
 - [ ] 12: Sprite Animation
 - [ ] 13: Character Animation
-- [ ] 14: Text Display
+- [x] 14: Text Display
 - [ ] 15: Audio Playback
 - [ ] 16: Audio Control
 - [ ] 17: Interaction with the Mouse
