@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{collections::HashMap, fmt::Display, hash::Hash};
 
 use once_cell::unsync::OnceCell;
 use sfml::{
@@ -9,6 +9,7 @@ use sfml::{
 use strum::IntoEnumIterator;
 
 pub struct Image {
+    image: SfmlImage,
     texture: SfBox<Texture>,
 }
 
@@ -21,8 +22,16 @@ impl Image {
                 .load_from_image(&image, IntRect::new(0, 0, x as i32, y as i32))
                 .ok()?;
 
-            Some(Image { texture })
+            Some(Image { image, texture })
         })
+    }
+
+    pub fn size(&self) -> Vector2<u32> {
+        self.image.size()
+    }
+
+    pub fn pixels(&self) -> &[u8] {
+        self.image.pixel_data()
     }
 
     pub fn texture(&self) -> &Texture {
@@ -53,19 +62,38 @@ impl Font {
     }
 }
 
-pub trait Key: IntoEnumIterator + Debug + Copy + Eq + Hash + PartialEq {}
-
-impl<T> Key for T where T: IntoEnumIterator + Debug + Copy + Eq + Hash + PartialEq {}
-
+pub trait Key: IntoEnumIterator + Display + Eq + Hash {}
+impl<T> Key for T where T: IntoEnumIterator + Display + Eq + Hash {}
 pub type Load<K, V> = fn(&K) -> Option<V>;
 
+pub struct Lazy<K, V> {
+    cell: OnceCell<V>,
+    load: Load<K, V>,
+}
+
+impl<K: Key, V> Lazy<K, V> {
+    pub fn new(load: Load<K, V>) -> Self {
+        Lazy {
+            cell: OnceCell::new(),
+            load,
+        }
+    }
+
+    pub fn get(&self, key: &K) -> &V {
+        self.cell.get_or_init(|| match (self.load)(key) {
+            Some(resource) => {
+                println!("Loaded resource \"{}\"", key);
+                resource
+            }
+            None => panic!("Failed to load resource \"{}\"", key),
+        })
+    }
+}
+
 pub struct ResourcePool<I: Key, A: Key, F: Key> {
-    images: HashMap<I, OnceCell<Image>>,
-    audios: HashMap<A, OnceCell<Audio>>,
-    fonts: HashMap<F, OnceCell<Font>>,
-    load_image: Load<I, Image>,
-    load_audio: Load<A, Audio>,
-    load_font: Load<F, Font>,
+    images: HashMap<I, Lazy<I, Image>>,
+    audios: HashMap<A, Lazy<A, Audio>>,
+    fonts: HashMap<F, Lazy<F, Font>>,
 }
 
 impl<I: Key, A: Key, F: Key> ResourcePool<I, A, F> {
@@ -79,42 +107,33 @@ impl<I: Key, A: Key, F: Key> ResourcePool<I, A, F> {
         let mut fonts = HashMap::new();
 
         for id in I::iter() {
-            images.insert(id, OnceCell::new());
+            images.insert(id, Lazy::new(load_image));
         }
 
         for id in A::iter() {
-            audios.insert(id, OnceCell::new());
+            audios.insert(id, Lazy::new(load_audio));
         }
 
         for id in F::iter() {
-            fonts.insert(id, OnceCell::new());
+            fonts.insert(id, Lazy::new(load_font));
         }
 
         ResourcePool {
             images,
             audios,
             fonts,
-            load_image,
-            load_audio,
-            load_font,
         }
     }
 
     pub fn get_image(&self, id: I) -> &Image {
-        self.images.get(&id).unwrap().get_or_init(|| {
-            (self.load_image)(&id).expect(&format!("Failed to load image \"{:?}\"", id))
-        })
+        self.images.get(&id).unwrap().get(&id)
     }
 
     pub fn get_audio(&self, id: A) -> &Audio {
-        self.audios.get(&id).unwrap().get_or_init(|| {
-            (self.load_audio)(&id).expect(&format!("Failed to load audio \"{:?}\"", id))
-        })
+        self.audios.get(&id).unwrap().get(&id)
     }
 
     pub fn get_font(&self, id: F) -> &Font {
-        self.fonts.get(&id).unwrap().get_or_init(|| {
-            (self.load_font)(&id).expect(&format!("Failed to load font \"{:?}\"", id))
-        })
+        self.fonts.get(&id).unwrap().get(&id)
     }
 }

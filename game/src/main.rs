@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use strum_macros::EnumIter;
-
 use bronze::{
     cursor::Cursor,
     engine::Engine,
@@ -9,27 +7,16 @@ use bronze::{
     graphics::{Canvas, Sprite},
     icon::Icon,
     input::{InputManager, Key},
-    resources::{Audio, Font, Image, ResourcePool},
+    resources::ResourcePool,
     sfml::graphics::Color,
     window::{Window, WindowConfig},
 };
 
 mod debugger;
+mod resources;
 
 use debugger::Debugger;
-
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, EnumIter)]
-enum Images {
-    Background,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
-enum Audios {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
-enum Fonts {
-    Debug,
-}
+use resources::*;
 
 pub struct MyGame<'r> {
     bg: Sprite<'r>,
@@ -70,10 +57,12 @@ impl<'r> Game for MyGame<'r> {
 }
 
 fn main() {
+    let resource_pool = ResourcePool::new(load_image, load_audio, load_font);
+
     let win_config = WindowConfig {
         title: "My Game".to_string(),
-        icon: Icon::from_image("assets/images/icon.png"),
-        cursor: Cursor::from_image("assets/images/cursor.png"),
+        icon: Some(Icon::from_image(resource_pool.get_image(Images::Icon))),
+        cursor: Cursor::from_image(resource_pool.get_image(Images::Cursor)),
         mode: (960, 540).into(),
         bg_color: Color::BLACK,
         ..WindowConfig::default()
@@ -81,29 +70,6 @@ fn main() {
 
     let mut engine = Engine::new(Window::new(win_config));
 
-    let resource_pool = ResourcePool::new(load_image, load_audio, load_font);
-
     let game = MyGame::new(&resource_pool);
     engine.run(game);
-}
-
-fn load_image(id: &Images) -> Option<Image> {
-    use Images::*;
-    match id {
-        Background => Image::new("assets/images/bg.jpg"),
-    }
-}
-
-fn load_audio(id: &Audios) -> Option<Audio> {
-    // use Audios::*;
-    match id {
-        _ => None,
-    }
-}
-
-fn load_font(id: &Fonts) -> Option<Font> {
-    use Fonts::*;
-    match id {
-        Debug => Font::new("assets/fonts/JetBrainsMono[wght].ttf"),
-    }
 }

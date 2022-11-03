@@ -1,28 +1,21 @@
-use sfml::graphics::Image as SfmlImage;
+use sfml::system::Vector2u;
 
-pub struct Icon {
-    image: SfmlImage,
+use crate::resources::Image;
+
+pub struct Icon<'r> {
+    image: &'r Image,
 }
 
-impl Icon {
-    pub fn from_image(path: &str) -> Option<Self> {
-        SfmlImage::from_file(path)
-            .map(|image| Icon { image })
-            .or_else(|| {
-                eprintln!("Failed to load icon from \"{}\"", path);
-                None
-            })
+impl<'r> Icon<'r> {
+    pub fn from_image(image: &'r Image) -> Self {
+        Icon { image }
     }
 
-    pub fn width(&self) -> u32 {
-        self.image.size().x
-    }
-
-    pub fn height(&self) -> u32 {
-        self.image.size().y
+    pub fn size(&self) -> Vector2u {
+        self.image.size()
     }
 
     pub fn pixels(&self) -> &[u8] {
-        self.image.pixel_data()
+        self.image.pixels()
     }
 }

@@ -2,13 +2,13 @@ use sfml::window::Event;
 
 use crate::{game::Game, input::InputManager, timer::Timer, window::Window};
 
-pub struct Engine {
-    window: Window,
+pub struct Engine<'r> {
+    window: Window<'r>,
     input: InputManager,
     timer: Timer,
 }
 
-impl Engine {
+impl<'r> Engine<'r> {
     pub fn new(window: Window) -> Engine {
         Engine {
             window,
@@ -17,11 +17,11 @@ impl Engine {
         }
     }
 
-    pub fn window(&self) -> &Window {
+    pub fn window(&self) -> &'r Window {
         &self.window
     }
 
-    pub fn window_mut(&mut self) -> &mut Window {
+    pub fn window_mut(&mut self) -> &'r mut Window {
         &mut self.window
     }
 

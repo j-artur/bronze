@@ -22,17 +22,17 @@ impl From<(u32, u32)> for WindowMode {
     }
 }
 
-pub struct WindowConfig {
+pub struct WindowConfig<'r> {
     pub title: String,
-    pub icon: Option<Icon>,
-    pub cursor: Option<Cursor>,
+    pub icon: Option<Icon<'r>>,
+    pub cursor: Option<Cursor<'r>>,
     pub bg_color: Color,
     pub show_cursor: bool,
     pub fps_config: FPSConfig,
     pub mode: WindowMode,
 }
 
-impl Default for WindowConfig {
+impl<'r> Default for WindowConfig<'r> {
     fn default() -> Self {
         WindowConfig {
             title: String::new(),
@@ -46,13 +46,13 @@ impl Default for WindowConfig {
     }
 }
 
-pub struct Window {
+pub struct Window<'r> {
     sfml_window: RenderWindow,
-    config: WindowConfig,
+    config: WindowConfig<'r>,
 }
 
-impl Window {
-    pub fn new(config: WindowConfig) -> Self {
+impl<'r> Window<'r> {
+    pub fn new(config: WindowConfig<'r>) -> Self {
         let (sfml_mode, sfml_style) = match config.mode {
             WindowMode::Fullscreen => (VideoMode::desktop_mode(), Style::NONE),
             WindowMode::Windowed { width, height } => (
@@ -66,7 +66,7 @@ impl Window {
 
         if let Some(icon) = &config.icon {
             unsafe {
-                sfml_window.set_icon(icon.width(), icon.height(), icon.pixels());
+                sfml_window.set_icon(icon.size().x, icon.size().y, icon.pixels());
             }
         }
 
@@ -128,7 +128,7 @@ impl Window {
     }
 }
 
-impl Canvas for Window {
+impl Canvas for Window<'_> {
     fn draw(&mut self, drawable: &dyn Drawable) {
         self.sfml_window.draw(drawable)
     }
