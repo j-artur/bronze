@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use sfml::window::Event;
 
 use crate::{game::Game, input::InputManager, timer::Timer, window::Window};
@@ -43,7 +45,7 @@ impl<'r> Engine<'r> {
 
             game.input(&self.input);
 
-            let frame_time = self.timer.reset();
+            let frame_time = self.timer.reset().min(Duration::from_secs_f64(1.0 / 30.0));
 
             game.pre_update(&self);
             game.update(self, frame_time);

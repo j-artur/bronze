@@ -9,14 +9,14 @@ use bronze::{
     input::{InputManager, Key},
     resources::ResourcePool,
     sfml::graphics::Color,
-    window::{Window, WindowConfig},
+    window::{FPSConfig, Window, WindowConfig},
 };
-
-mod debugger;
-mod resources;
 
 use debugger::Debugger;
 use resources::*;
+
+mod debugger;
+mod resources;
 
 pub struct MyGame<'r> {
     bg: Sprite<'r>,
@@ -63,9 +63,10 @@ fn main() {
         title: "My Game".to_string(),
         icon: Some(Icon::from_image(resource_pool.get_image(Images::Icon))),
         cursor: Cursor::from_image(resource_pool.get_image(Images::Cursor)),
-        mode: (960, 540).into(),
         bg_color: Color::BLACK,
-        ..WindowConfig::default()
+        show_cursor: true,
+        fps_config: FPSConfig::VSync,
+        mode: (960, 540).into(),
     };
 
     let mut engine = Engine::new(Window::new(win_config));

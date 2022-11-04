@@ -76,26 +76,18 @@ impl<'r> Window<'r> {
             }
         }
 
+        sfml_window.set_mouse_cursor_visible(config.show_cursor);
+
+        sfml_window.set_vertical_sync_enabled(matches!(config.fps_config, FPSConfig::VSync));
+        sfml_window.set_framerate_limit(match config.fps_config {
+            FPSConfig::Limited(limit) => limit,
+            _ => 0,
+        });
+
         Window {
             sfml_window,
             config,
         }
-    }
-
-    pub fn fps_config(&mut self) -> &FPSConfig {
-        &self.config.fps_config
-    }
-
-    pub fn set_fps_config(&mut self, config: FPSConfig) {
-        self.sfml_window
-            .set_vertical_sync_enabled(matches!(config, FPSConfig::VSync));
-        self.sfml_window
-            .set_framerate_limit(if let FPSConfig::Limited(limit) = config {
-                limit
-            } else {
-                0
-            });
-        self.config.fps_config = config;
     }
 
     pub fn show_cursor(&mut self, show: bool) {

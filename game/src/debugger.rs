@@ -42,7 +42,7 @@ impl<'r> Debugger<'r> {
     pub fn update(&mut self, _: &mut Engine, frame_time: Duration) {
         self.total_time += frame_time;
         self.frames += 1;
-        if self.total_time >= Duration::from_millis(200) {
+        if self.total_time >= Duration::from_millis(250) {
             self.text.set_string(&format!(
                 "FPS: {:.02}\nFrame Time: {:.02}ms",
                 self.frames as f32 / self.total_time.as_secs_f32(),
