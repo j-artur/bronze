@@ -53,7 +53,7 @@ impl<'r> Debugger<'r> {
         }
     }
 
-    pub fn draw(&self, target: &mut dyn Canvas) {
+    pub fn draw<C: Canvas>(&self, target: &mut C) {
         if self.on {
             target.draw(&self.text);
         }

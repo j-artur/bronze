@@ -21,7 +21,7 @@ pub trait Game {
         let _ = engine;
     }
 
-    fn draw(&self, target: &mut dyn Canvas) {
+    fn draw<C: Canvas>(&self, target: &mut C) {
         let _ = target;
     }
 }

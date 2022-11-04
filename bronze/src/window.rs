@@ -121,7 +121,7 @@ impl<'r> Window<'r> {
 }
 
 impl Canvas for Window<'_> {
-    fn draw(&mut self, drawable: &dyn Drawable) {
+    fn draw<D: Drawable>(&mut self, drawable: &D) {
         self.sfml_window.draw(drawable)
     }
 }

@@ -6,7 +6,7 @@ use sfml::{
 use crate::resources::Image;
 
 pub trait Canvas {
-    fn draw(&mut self, drawable: &dyn Drawable);
+    fn draw<D: Drawable>(&mut self, drawable: &D);
 }
 
 pub struct Sprite<'a> {
@@ -67,7 +67,7 @@ impl<'a> Sprite<'a> {
         });
     }
 
-    pub fn draw(&self, target: &mut dyn Canvas) {
+    pub fn draw<C: Canvas>(&self, target: &mut C) {
         target.draw(&self.sfml_sprite);
     }
 }
