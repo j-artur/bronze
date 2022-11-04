@@ -6,7 +6,7 @@ use sfml::{
 use crate::resources::Image;
 
 pub trait Canvas {
-    fn draw<D: Drawable>(&mut self, drawable: &D);
+    fn draw(&mut self, drawable: &dyn Drawable);
 }
 
 pub struct Sprite<'a> {
@@ -27,37 +27,42 @@ impl<'a> Sprite<'a> {
     pub fn position(&self) -> Vector2f {
         self.sfml_sprite.position()
     }
-
     pub fn set_position(&mut self, position: Vector2f) {
         self.sfml_sprite.set_position(position);
+    }
+    pub fn move_by(&mut self, translation: Vector2f) {
+        self.sfml_sprite.move_(translation);
     }
 
     pub fn rotation(&self) -> f32 {
         self.sfml_sprite.rotation()
     }
-
     pub fn set_rotation(&mut self, rotation: f32) {
         self.sfml_sprite.set_rotation(rotation);
+    }
+    pub fn rotate_by(&mut self, rotation: f32) {
+        self.sfml_sprite.rotate(rotation);
     }
 
     pub fn scale(&self) -> Vector2f {
         self.sfml_sprite.get_scale()
     }
-
-    pub fn scale_by(&mut self, scale: Vector2f) {
-        self.sfml_sprite.scale(scale);
-    }
-
     pub fn set_scale(&mut self, scale: Vector2f) {
         self.sfml_sprite.set_scale(scale);
+    }
+    pub fn scale_by(&mut self, scale: Vector2f) {
+        self.sfml_sprite.scale(scale);
     }
 
     pub fn color(&self) -> Color {
         self.sfml_sprite.color()
     }
-
     pub fn set_color(&mut self, color: Color) {
         self.sfml_sprite.set_color(color);
+    }
+
+    pub fn draw(&self, target: &mut dyn Canvas) {
+        target.draw(&self.sfml_sprite);
     }
 
     pub fn flip(&mut self, Vector2 { x, y }: Vector2<bool>) {
@@ -65,9 +70,5 @@ impl<'a> Sprite<'a> {
             x: if x { -1.0 } else { 1.0 },
             y: if y { -1.0 } else { 1.0 },
         });
-    }
-
-    pub fn draw<C: Canvas>(&self, target: &mut C) {
-        target.draw(&self.sfml_sprite);
     }
 }
