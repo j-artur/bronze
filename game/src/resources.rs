@@ -8,6 +8,8 @@ pub enum Images {
     Icon,
     Cursor,
     Background,
+    Player,
+    Ball,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, EnumIter)]
@@ -24,6 +26,8 @@ pub fn load_image(id: &Images) -> Option<Image> {
         Icon => Image::new("assets/images/icon.png"),
         Cursor => Image::new("assets/images/cursor.png"),
         Background => Image::new("assets/images/bg.jpg"),
+        Player => Image::new("assets/images/player.png"),
+        Ball => Image::new("assets/images/ball.png"),
     }
 }
 

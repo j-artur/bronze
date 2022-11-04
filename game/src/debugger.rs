@@ -1,13 +1,15 @@
 use std::time::Duration;
 
 use bronze::{
-    engine::Engine,
+    entity::Entity,
     graphics::Canvas,
     input::{InputManager, Key},
     resources::Font,
     sfml::graphics::{Color, Text, Transformable},
 };
+use bronze_macros::Entity;
 
+#[derive(Entity)]
 pub struct Debugger<'r> {
     on: bool,
     total_time: Duration,
@@ -32,14 +34,16 @@ impl<'r> Debugger<'r> {
     pub fn toggle(&mut self) {
         self.on = !self.on;
     }
+}
 
-    pub fn input(&mut self, input: &InputManager) {
+impl<'r> Entity<()> for Debugger<'r> {
+    fn input(&mut self, input: &InputManager) {
         if input.key_press(Key::F) && input.key_down(Key::LControl) {
             self.toggle();
         }
     }
 
-    pub fn update(&mut self, _: &mut Engine, frame_time: Duration) {
+    fn update(&mut self, _ctx: &mut (), frame_time: Duration) {
         self.total_time += frame_time;
         self.frames += 1;
         if self.total_time >= Duration::from_millis(250) {
@@ -53,7 +57,7 @@ impl<'r> Debugger<'r> {
         }
     }
 
-    pub fn draw<C: Canvas>(&self, target: &mut C) {
+    fn draw(&self, _: &(), target: &mut dyn Canvas) {
         if self.on {
             target.draw(&self.text);
         }
