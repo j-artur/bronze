@@ -24,6 +24,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bronze_macros"
+version = "0.1.0"
+dependencies = [
+ "bronze",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -34,6 +43,7 @@ name = "game"
 version = "0.1.0"
 dependencies = [
  "bronze",
+ "bronze_macros",
  "strum",
  "strum_macros",
 ]
