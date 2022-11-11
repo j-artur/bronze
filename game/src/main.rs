@@ -1,230 +1,279 @@
 use std::time::Duration;
 
+use ball::Ball;
+use block::Block;
 use bronze::{
     cursor::Cursor,
     engine::Engine,
-    entity::{Entity, EntityPosition},
     game::Game,
-    graphics::{Canvas, Sprite},
+    graphics::Sprite,
     icon::Icon,
     input::{InputManager, Key},
-    resources::{Image, ResourcePool},
-    scene::Scene,
-    sfml::{graphics::Color, system::Vector2},
-    window::{FPSConfig, Window, WindowConfig},
+    resources::ResourcePool,
+    scene::{Collision, Entity, Scene},
+    sfml::{
+        graphics::Color,
+        system::{Vector2, Vector2f},
+    },
+    shape::{BBox, ShapeRef},
+    window::{Canvas, FPSConfig, Window, WindowConfig},
 };
 
-use bronze_macros::{position, size, Entity};
-
 use debugger::Debugger;
+use player::Player;
 use resources::*;
 
+mod ball;
+mod block;
 mod debugger;
+mod player;
 mod resources;
 
-const WINDOW_WIDTH: u32 = 960;
-const WINDOW_HEIGHT: u32 = 540;
+pub const WINDOW_WIDTH: u32 = 960;
+pub const WINDOW_HEIGHT: u32 = 540;
 
-#[position]
-#[size]
-#[derive(Entity)]
-struct Player<'r> {
-    sprite: Sprite<'r>,
-    velocity: f32,
+pub struct GameContext {
+    pub player_top: Vector2f,
 }
 
-impl<'r> Player<'r> {
-    const SPEED: f32 = 640.0;
+pub enum StaticEntity<'r> {
+    Player(Player<'r>),
+    Block(Block<'r>),
+}
 
-    pub fn new(image: &'r Image) -> Self {
-        let Vector2 { x, y } = image.size();
+impl Entity for StaticEntity<'_> {
+    type Ctx = GameContext;
 
-        Player {
-            sprite: Sprite::new(image),
-            velocity: 0.0,
-            position: (
-                (WINDOW_WIDTH - x) as f32 / 2.0,
-                (WINDOW_HEIGHT - y - 32) as f32,
-            )
-                .into(),
-            size: (x as f32, y as f32).into(),
+    #[inline]
+    fn bbox(&self) -> ShapeRef {
+        match self {
+            StaticEntity::Player(player) => player.bbox(),
+            StaticEntity::Block(block) => block.bbox(),
         }
     }
-}
 
-impl<'r> Entity<()> for Player<'r> {
+    #[inline]
     fn input(&mut self, input: &InputManager) {
-        self.velocity = 0.0;
-        if input.key_down(Key::Left) {
-            self.velocity -= Self::SPEED;
-        }
-        if input.key_down(Key::Right) {
-            self.velocity += Self::SPEED;
+        match self {
+            StaticEntity::Player(player) => player.input(input),
+            StaticEntity::Block(block) => block.input(input),
         }
     }
 
-    fn update(&mut self, _: &mut (), frame_time: Duration) {
-        let Vector2 { x: width, y: _ } = self.size;
-        let velocity = self.velocity * frame_time.as_secs_f32();
-
-        self.move_by(velocity, 0.0);
-
-        let Vector2 { x, y: _ } = self.position;
-        if x < 0.0 {
-            self.move_by(-x, 0.0);
-        } else if x + width as f32 > WINDOW_WIDTH as f32 {
-            self.move_by(WINDOW_WIDTH as f32 - x - width as f32, 0.0);
+    #[inline]
+    fn pre_update(&mut self, _ctx: &GameContext) {
+        match self {
+            StaticEntity::Player(player) => player.pre_update(_ctx),
+            StaticEntity::Block(block) => block.pre_update(_ctx),
         }
-
-        self.sprite.set_position(self.position);
     }
 
-    fn draw(&self, _ctx: &(), target: &mut dyn Canvas) {
-        self.sprite.draw(target);
+    #[inline]
+    fn update(&mut self, _ctx: &mut GameContext, _frame_time: Duration) {
+        match self {
+            StaticEntity::Player(player) => player.update(_ctx, _frame_time),
+            StaticEntity::Block(block) => block.update(_ctx, _frame_time),
+        }
     }
-}
 
-#[position]
-#[size]
-#[derive(Entity)]
+    #[inline]
+    fn post_update(&mut self, _ctx: &GameContext) {
+        match self {
+            StaticEntity::Player(player) => player.post_update(_ctx),
+            StaticEntity::Block(block) => block.post_update(_ctx),
+        }
+    }
 
-struct Ball<'r> {
-    sprite: Sprite<'r>,
-    velocity: Vector2<f32>,
-    moving: bool,
-}
-
-impl<'r> Ball<'r> {
-    const SPEED: f32 = 480.0;
-
-    pub fn new(image: &'r Image, player: &Player) -> Self {
-        let Vector2 { x, y } = image.size();
-
-        let position =
-            player.position + Vector2::new((player.size.x - x as f32) / 2.0, -(y as f32));
-
-        Ball {
-            sprite: Sprite::new(image),
-            velocity: Vector2::new(0.0, 0.0),
-            position,
-            size: (x as f32, y as f32).into(),
-            moving: false,
+    #[inline]
+    fn draw(&self, _ctx: &GameContext, _target: &mut Canvas) {
+        match self {
+            StaticEntity::Player(player) => player.draw(_ctx, _target),
+            StaticEntity::Block(block) => block.draw(_ctx, _target),
         }
     }
 }
 
-impl<'r> Entity<()> for Ball<'r> {
-    fn input(&mut self, input: &InputManager) {
-        if !self.moving {
-            self.velocity = (0.0, 0.0).into();
-            if input.key_down(Key::Left) {
-                self.velocity -= (Player::SPEED, 0.0).into();
-            }
-            if input.key_down(Key::Right) {
-                self.velocity += (Player::SPEED, 0.0).into();
-            }
-            if input.key_down(Key::Space) {
-                self.velocity = Vector2::new(Self::SPEED, -Self::SPEED);
-                self.moving = true;
-            }
+impl<'r> Collision<Ball<'r>> for StaticEntity<'r> {
+    #[inline]
+    fn on_collision(&mut self, other: &Ball<'r>, ctx: &mut GameContext) {
+        match self {
+            StaticEntity::Player(_) => {}
+            StaticEntity::Block(block) => block.on_collision(other, ctx),
         }
-    }
-
-    fn update(&mut self, _ctx: &mut (), frame_time: Duration) {
-        let velocity = self.velocity * frame_time.as_secs_f32();
-        self.move_by(velocity.x, velocity.y);
-
-        // Check for collisions with the walls
-
-        let Vector2 { x, y } = self.position;
-        let Vector2 {
-            x: width,
-            y: height,
-        } = self.size;
-
-        if x < 0.0 {
-            self.move_by(-x, 0.0);
-            self.velocity.x = -self.velocity.x;
-        } else if x + width > WINDOW_WIDTH as f32 {
-            self.move_by(WINDOW_WIDTH as f32 - x - width, 0.0);
-            self.velocity.x = -self.velocity.x;
-        }
-
-        if y < 0.0 {
-            self.move_by(0.0, -y);
-            self.velocity.y = -self.velocity.y;
-        } else if y + height > WINDOW_HEIGHT as f32 {
-            self.move_by(0.0, WINDOW_HEIGHT as f32 - y - height);
-            self.velocity.y = -self.velocity.y;
-        }
-
-        self.sprite.set_position(self.position);
-    }
-
-    fn draw(&self, _ctx: &(), target: &mut dyn Canvas) {
-        self.sprite.draw(target);
     }
 }
 
 pub struct MyGame<'r> {
     bg: Sprite<'r>,
-    scene: Scene<'r, ()>,
+    debugger: Debugger<'r>,
+    scene: Scene<StaticEntity<'r>, Ball<'r>, GameContext>,
+    player_top: Vector2f,
     running: bool,
+    paused: bool,
 }
 
 impl<'r> MyGame<'r> {
-    fn new(resource_pool: &'r ResourcePool<Images, Audios, Fonts>) -> Self {
-        let bg = Sprite::new(resource_pool.get_image(Images::Background));
+    const LINE1: f32 = 50.0;
+    const LINE2: f32 = 80.0;
+    const LINE3: f32 = 110.0;
+    const LINE4: f32 = 140.0;
+    const LINE5: f32 = 170.0;
 
+    fn new(resource_pool: &'r ResourcePool<Images, Audios, Fonts>, window: &Window) -> Self {
         let mut scene = Scene::new();
 
-        let debugger = Debugger::new(true, resource_pool.get_font(Fonts::Debug), 10);
-        scene.add_entity(Box::new(debugger));
+        let background = resource_pool.get_image(Images::Background);
+        let bg = Sprite::new(background);
 
-        let player = Player::new(resource_pool.get_image(Images::Player));
-        let ball = Ball::new(resource_pool.get_image(Images::Ball), &player);
+        let debug_font = resource_pool.get_font(Fonts::Debug);
+        let debugger = Debugger::new(true, debug_font, 10);
 
-        scene.add_entity(Box::new(player));
-        scene.add_entity(Box::new(ball));
+        let player = resource_pool.get_image(Images::Player);
+        let player = Player::new(player);
+
+        let player_top = Vector2::new(
+            player.bbox().left() + player.bbox().width() / 2.0,
+            player.bbox().top(),
+        );
+
+        let ball = resource_pool.get_image(Images::Ball);
+        let ball = Ball::new(ball, &player);
+
+        scene.add_static(player.into());
+        scene.add_dynamic(ball);
+
+        let tile1 = resource_pool.get_image(Images::Tile1);
+        let tile2 = resource_pool.get_image(Images::Tile2);
+        let tile3 = resource_pool.get_image(Images::Tile3);
+        let tile4 = resource_pool.get_image(Images::Tile4);
+        let tile5 = resource_pool.get_image(Images::Tile5);
+
+        scene.add_static(Block::new(tile1, window.center_x() - 350.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() - 270.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() - 190.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() - 110.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() - 30.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() + 50.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() + 130.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() + 210.0, Self::LINE1).into());
+        scene.add_static(Block::new(tile1, window.center_x() + 290.0, Self::LINE1).into());
+
+        scene.add_static(Block::new(tile2, window.center_x() - 350.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() - 270.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() - 190.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() - 110.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() - 30.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() + 50.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() + 130.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() + 210.0, Self::LINE2).into());
+        scene.add_static(Block::new(tile2, window.center_x() + 290.0, Self::LINE2).into());
+
+        scene.add_static(Block::new(tile3, window.center_x() - 350.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() - 270.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() - 190.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() - 110.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() - 30.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() + 50.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() + 130.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() + 210.0, Self::LINE3).into());
+        scene.add_static(Block::new(tile3, window.center_x() + 290.0, Self::LINE3).into());
+
+        scene.add_static(Block::new(tile4, window.center_x() - 350.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() - 270.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() - 190.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() - 110.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() - 30.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() + 50.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() + 130.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() + 210.0, Self::LINE4).into());
+        scene.add_static(Block::new(tile4, window.center_x() + 290.0, Self::LINE4).into());
+
+        scene.add_static(Block::new(tile5, window.center_x() - 350.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() - 270.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() - 190.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() - 110.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() - 30.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() + 50.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() + 130.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() + 210.0, Self::LINE5).into());
+        scene.add_static(Block::new(tile5, window.center_x() + 290.0, Self::LINE5).into());
 
         MyGame {
             bg,
+            debugger,
             scene,
+            player_top,
             running: true,
+            paused: false,
         }
     }
 }
 
-impl<'r> Game for MyGame<'r> {
+impl Game for MyGame<'_> {
+    #[inline]
     fn is_running(&self) -> bool {
         self.running
     }
 
+    #[inline]
     fn input(&mut self, input: &InputManager) {
-        if input.key_down(Key::Escape) {
-            self.running = false;
+        if input.key_press(Key::P) {
+            self.paused = !self.paused;
         }
 
-        self.scene.input(input);
+        if !self.paused {
+            if input.key_down(Key::Escape) {
+                self.running = false;
+            }
+
+            self.scene.input(input);
+            self.debugger.input(input);
+        }
     }
 
-    fn pre_update(&mut self, engine: &Engine) {
-        let _ = engine;
-        self.scene.pre_update(&());
+    #[inline]
+    fn pre_update(&mut self, _engine: &Engine) {
+        if !self.paused {
+            let ctx = GameContext {
+                player_top: self.player_top,
+            };
+            self.scene.pre_update(&ctx);
+            self.debugger.pre_update(&ctx);
+        }
     }
 
+    #[inline]
     fn update(&mut self, _engine: &mut Engine, delta: Duration) {
-        self.scene.update(&mut (), delta);
+        if !self.paused {
+            let mut ctx = GameContext {
+                player_top: self.player_top,
+            };
+            self.scene.update(&mut ctx, delta);
+            self.debugger.update(&mut ctx, delta);
+            self.player_top = ctx.player_top;
+        }
     }
 
-    fn post_update(&mut self, engine: &Engine) {
-        let _ = engine;
-        self.scene.post_update(&());
+    #[inline]
+    fn post_update(&mut self, _engine: &Engine) {
+        if !self.paused {
+            let mut ctx = GameContext {
+                player_top: self.player_top,
+            };
+            self.scene.collisions(&mut ctx);
+            self.player_top = ctx.player_top;
+            self.scene.post_update(&ctx);
+            self.debugger.post_update(&ctx);
+        }
     }
 
-    fn draw<C: Canvas>(&self, target: &mut C) {
+    #[inline]
+    fn draw(&self, target: &mut Canvas) {
         self.bg.draw(target);
-        self.scene.draw(&(), target);
+        let ctx = GameContext {
+            player_top: self.player_top,
+        };
+        self.scene.draw(&ctx, target);
     }
 }
 
@@ -243,6 +292,6 @@ fn main() {
 
     let mut engine = Engine::new(Window::new(win_config));
 
-    let game = MyGame::new(&resource_pool);
+    let game = MyGame::new(&resource_pool, engine.window());
     engine.run(game);
 }

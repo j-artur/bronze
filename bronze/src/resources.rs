@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, hash::Hash};
+use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 use once_cell::unsync::OnceCell;
 use sfml::{
@@ -42,8 +42,7 @@ impl Image {
 pub struct Audio;
 
 impl Audio {
-    pub fn new(path: &str) -> Option<Self> {
-        let _ = path;
+    pub fn new(_path: &str) -> Option<Self> {
         Some(Audio)
     }
 }
@@ -62,9 +61,9 @@ impl Font {
     }
 }
 
-pub trait Key: IntoEnumIterator + Display + Eq + Hash {}
-impl<T> Key for T where T: IntoEnumIterator + Display + Eq + Hash {}
-pub type Load<K, V> = fn(&K) -> Option<V>;
+pub trait Key: IntoEnumIterator + Debug + Eq + Hash {}
+impl<T> Key for T where T: IntoEnumIterator + Debug + Eq + Hash {}
+pub type Load<K, V> = fn(&K) -> V;
 
 pub struct Lazy<K, V> {
     cell: OnceCell<V>,
@@ -80,13 +79,7 @@ impl<K: Key, V> Lazy<K, V> {
     }
 
     pub fn get(&self, key: &K) -> &V {
-        self.cell.get_or_init(|| match (self.load)(key) {
-            Some(resource) => {
-                println!("Loaded resource \"{}\"", key);
-                resource
-            }
-            None => panic!("Failed to load resource \"{}\"", key),
-        })
+        self.cell.get_or_init(|| (self.load)(key))
     }
 }
 

@@ -3,7 +3,7 @@ use sfml::{
     window::{Event, Style, VideoMode},
 };
 
-use crate::{cursor::Cursor, graphics::Canvas, icon::Icon};
+use crate::{cursor::Cursor, icon::Icon};
 
 pub enum FPSConfig {
     VSync,
@@ -32,7 +32,7 @@ pub struct WindowConfig<'r> {
     pub mode: WindowMode,
 }
 
-impl<'r> Default for WindowConfig<'r> {
+impl Default for WindowConfig<'_> {
     fn default() -> Self {
         WindowConfig {
             title: String::new(),
@@ -43,6 +43,16 @@ impl<'r> Default for WindowConfig<'r> {
             icon: None,
             cursor: None,
         }
+    }
+}
+
+pub struct Canvas<'w> {
+    target: &'w mut RenderWindow,
+}
+
+impl Canvas<'_> {
+    pub fn draw<D: Drawable>(&mut self, drawable: &D) {
+        self.target.draw(drawable)
     }
 }
 
@@ -118,10 +128,26 @@ impl<'r> Window<'r> {
     pub fn close(&mut self) {
         self.sfml_window.close()
     }
-}
 
-impl Canvas for Window<'_> {
-    fn draw(&mut self, drawable: &dyn Drawable) {
-        self.sfml_window.draw(drawable)
+    pub fn width(&self) -> u32 {
+        self.sfml_window.size().x
+    }
+
+    pub fn height(&self) -> u32 {
+        self.sfml_window.size().y
+    }
+
+    pub fn center_x(&self) -> f32 {
+        self.width() as f32 / 2.0
+    }
+
+    pub fn center_y(&self) -> f32 {
+        self.height() as f32 / 2.0
+    }
+
+    pub fn canvas(&mut self) -> Canvas {
+        Canvas {
+            target: &mut self.sfml_window,
+        }
     }
 }

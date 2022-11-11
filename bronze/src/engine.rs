@@ -19,7 +19,7 @@ impl<'r> Engine<'r> {
         }
     }
 
-    pub fn window(&self) -> &'r Window {
+    pub fn window(&self) -> &Window {
         &self.window
     }
 
@@ -54,7 +54,7 @@ impl<'r> Engine<'r> {
             self.input.update();
 
             self.window.clear();
-            game.draw(&mut self.window);
+            game.draw(&mut self.window.canvas());
             self.window.display();
         }
     }

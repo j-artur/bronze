@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{engine::Engine, graphics::Canvas, input::InputManager};
+use crate::{engine::Engine, input::InputManager, window::Canvas};
 
 pub trait Game {
     fn is_running(&self) -> bool;
@@ -21,7 +21,7 @@ pub trait Game {
         let _ = engine;
     }
 
-    fn draw<C: Canvas>(&self, target: &mut C) {
+    fn draw(&self, target: &mut Canvas) {
         let _ = target;
     }
 }

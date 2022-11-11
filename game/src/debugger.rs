@@ -1,15 +1,16 @@
 use std::time::Duration;
 
 use bronze::{
-    entity::Entity,
-    graphics::Canvas,
     input::{InputManager, Key},
     resources::Font,
+    scene::Entity,
     sfml::graphics::{Color, Text, Transformable},
+    shape::ShapeRef,
+    window::Canvas,
 };
-use bronze_macros::Entity;
 
-#[derive(Entity)]
+use crate::GameContext;
+
 pub struct Debugger<'r> {
     on: bool,
     total_time: Duration,
@@ -36,14 +37,18 @@ impl<'r> Debugger<'r> {
     }
 }
 
-impl<'r> Entity<()> for Debugger<'r> {
+impl Entity for Debugger<'_> {
+    type Ctx = GameContext;
+
+    #[inline]
     fn input(&mut self, input: &InputManager) {
         if input.key_press(Key::F) && input.key_down(Key::LControl) {
             self.toggle();
         }
     }
 
-    fn update(&mut self, _ctx: &mut (), frame_time: Duration) {
+    #[inline]
+    fn update(&mut self, _ctx: &mut GameContext, frame_time: Duration) {
         self.total_time += frame_time;
         self.frames += 1;
         if self.total_time >= Duration::from_millis(250) {
@@ -57,9 +62,15 @@ impl<'r> Entity<()> for Debugger<'r> {
         }
     }
 
-    fn draw(&self, _: &(), target: &mut dyn Canvas) {
+    #[inline]
+    fn draw(&self, _ctx: &GameContext, target: &mut Canvas) {
         if self.on {
             target.draw(&self.text);
         }
+    }
+
+    #[inline]
+    fn bbox(&self) -> ShapeRef {
+        ShapeRef::None
     }
 }
