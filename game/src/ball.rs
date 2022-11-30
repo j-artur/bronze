@@ -1,12 +1,12 @@
 use std::time::Duration;
 
 use bronze::{
-    graphics::Sprite,
     input::{InputManager, Key},
     resources::Image,
     scene::{Collision, Entity},
     sfml::system::Vector2,
     shape::{BBox, Circle, Movable, ShapeRef},
+    sprite::Sprite,
     window::Canvas,
 };
 
@@ -92,8 +92,6 @@ impl Entity for Ball<'_> {
             );
             self.velocity.y = -self.velocity.y;
         }
-
-        self.sprite.set_position(self.hitbox.x, self.hitbox.y);
     }
 
     #[inline]
@@ -108,7 +106,7 @@ impl Entity for Ball<'_> {
 
     #[inline]
     fn draw(&self, _ctx: &GameContext, target: &mut Canvas) {
-        self.sprite.draw(target);
+        self.sprite.draw(target, self.hitbox.position(), 0.0, 1.0);
     }
 }
 

@@ -1,12 +1,12 @@
 use std::time::Duration;
 
 use bronze::{
-    graphics::Sprite,
     input::{InputManager, Key},
     resources::Image,
     scene::Entity,
     sfml::system::Vector2,
-    shape::{Movable, Rect, ShapeRef},
+    shape::{BBox, Movable, Rect, ShapeRef},
+    sprite::Sprite,
     window::Canvas,
 };
 
@@ -73,13 +73,11 @@ impl Entity for Player<'_> {
         }
 
         ctx.player_top = Vector2::new(self.hitbox.x + self.hitbox.width / 2.0, self.hitbox.y);
-
-        self.sprite.set_position(self.hitbox.x, self.hitbox.y);
     }
 
     #[inline]
     fn draw(&self, _ctx: &GameContext, target: &mut Canvas) {
-        self.sprite.draw(target);
+        self.sprite.draw(target, self.hitbox.position(), 0.0, 1.0);
     }
 }
 

@@ -8,11 +8,11 @@ The code will change as the course progresses, updating to the closest to the wh
 
 This means that, in order for it to run correctly, it must meet the requirements set out in the crate instructions.
 
-DLLs are included in the `bronze/include/` folder. There, there is more information on how to run the application on _Windows_.
+DLLs are included in the `bronze/include` folder. There, there is more information on how to run the application on _Windows_.
 
 I don't have any more information regarding other operating systems at the moment.
 
-## **Classes:**
+## **Progress on Classes:**
 
 - [x] 0: Introduction
 - [x] 1: Windows Programming
@@ -24,7 +24,7 @@ I don't have any more information regarding other operating systems at the momen
 - [x] 7: Refresh Rate
 - [x] 8: Sprite Rendering
 - [x] 9: Scene Manager
-- [ ] 10: Collision Detection
+- [x] 10: Collision Detection
 - [ ] 11: **PacMan**
 - [ ] 12: Sprite Animation
 - [ ] 13: Character Animation

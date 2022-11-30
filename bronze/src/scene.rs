@@ -58,13 +58,13 @@ where
     }
 
     #[inline]
-    pub fn add_static(&mut self, entity: S) {
-        self.static_entities.push(entity);
+    pub fn add_static<E: Into<S>>(&mut self, entity: E) {
+        self.static_entities.push(entity.into());
     }
 
     #[inline]
-    pub fn add_dynamic(&mut self, entity: D) {
-        self.dynamic_entities.push(entity);
+    pub fn add_dynamic<E: Into<D>>(&mut self, entity: E) {
+        self.dynamic_entities.push(entity.into());
     }
 
     pub fn remove_static(&mut self, entity: &S) -> Option<S> {

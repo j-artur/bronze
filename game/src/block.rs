@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use bronze::{
-    graphics::Sprite,
     resources::Image,
     scene::{Collision, Entity},
     sfml::system::Vector2,
-    shape::{Movable, Rect, ShapeRef},
+    shape::{BBox, Movable, Rect, ShapeRef},
+    sprite::Sprite,
     window::Canvas,
 };
 
@@ -35,8 +35,7 @@ impl<'r> Block<'r> {
             height,
         };
 
-        let mut sprite = Sprite::new(image);
-        sprite.set_position(x, y);
+        let sprite = Sprite::new(image);
 
         Block {
             sprite,
@@ -65,7 +64,6 @@ impl Entity for Block<'_> {
         if self.falling {
             let velocity = Self::SPEED * frame_time.as_secs_f32();
             self.hitbox.move_by(0.0, velocity);
-            self.sprite.set_position(self.hitbox.x, self.hitbox.y);
         }
 
         if self.hitbox.y > WINDOW_HEIGHT as f32 {
@@ -74,7 +72,7 @@ impl Entity for Block<'_> {
     }
 
     fn draw(&self, _ctx: &GameContext, target: &mut Canvas) {
-        self.sprite.draw(target);
+        self.sprite.draw(target, self.hitbox.position(), 0.0, 1.0);
     }
 }
 
