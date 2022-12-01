@@ -25,17 +25,18 @@ pub enum Fonts {
 
 pub fn load_image(id: &Images) -> Image {
     use Images::*;
+
     if let Some(image) = match id {
-        Icon => Image::new("assets/images/icon.png"),
-        Cursor => Image::new("assets/images/cursor.png"),
-        Background => Image::new("assets/images/bg.jpg"),
-        Player => Image::new("assets/images/player.png"),
-        Ball => Image::new("assets/images/ball.png"),
-        Tile1 => Image::new("assets/images/tile1.png"),
-        Tile2 => Image::new("assets/images/tile2.png"),
-        Tile3 => Image::new("assets/images/tile3.png"),
-        Tile4 => Image::new("assets/images/tile4.png"),
-        Tile5 => Image::new("assets/images/tile5.png"),
+        Icon => Image::new("examples/breakout/assets/images/icon.png"),
+        Cursor => Image::new("examples/breakout/assets/images/cursor.png"),
+        Background => Image::new("examples/breakout/assets/images/bg.jpg"),
+        Player => Image::new("examples/breakout/assets/images/player.png"),
+        Ball => Image::new("examples/breakout/assets/images/ball.png"),
+        Tile1 => Image::new("examples/breakout/assets/images/tile1.png"),
+        Tile2 => Image::new("examples/breakout/assets/images/tile2.png"),
+        Tile3 => Image::new("examples/breakout/assets/images/tile3.png"),
+        Tile4 => Image::new("examples/breakout/assets/images/tile4.png"),
+        Tile5 => Image::new("examples/breakout/assets/images/tile5.png"),
     } {
         println!("Loaded image {:?}", id);
         image
@@ -50,8 +51,9 @@ pub fn load_audio(_id: &Audios) -> Audio {
 
 pub fn load_font(id: &Fonts) -> Font {
     use Fonts::*;
+
     if let Some(font) = match id {
-        Debug => Font::new("assets/fonts/JetBrainsMono[wght].ttf"),
+        Debug => Font::new("examples/breakout/assets/fonts/JetBrainsMono[wght].ttf"),
     } {
         println!("Loaded font {:?}", id);
         font

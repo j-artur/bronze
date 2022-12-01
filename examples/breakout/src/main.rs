@@ -98,7 +98,7 @@ impl Collision<Ball> for StaticEntity {
     }
 }
 
-pub struct MyGame {
+pub struct Breakout {
     bg: Sprite,
     debugger: Debugger,
     scene: Scene<StaticEntity, Ball, GameContext>,
@@ -107,7 +107,7 @@ pub struct MyGame {
     paused: bool,
 }
 
-impl MyGame {
+impl Breakout {
     const LINE1: f32 = 50.0;
     const LINE2: f32 = 80.0;
     const LINE3: f32 = 110.0;
@@ -193,7 +193,7 @@ impl MyGame {
         scene.add_static(Block::new(&tile5, window.center_x() + 210.0, Self::LINE5));
         scene.add_static(Block::new(&tile5, window.center_x() + 290.0, Self::LINE5));
 
-        MyGame {
+        Breakout {
             bg,
             debugger,
             scene,
@@ -204,7 +204,7 @@ impl MyGame {
     }
 }
 
-impl Game for MyGame {
+impl Game for Breakout {
     #[inline]
     fn is_running(&self) -> bool {
         self.running
@@ -274,5 +274,5 @@ fn main() {
 
     let mut engine = Engine::new(Window::new(win_config));
 
-    engine.run(MyGame::new(&resource_pool, engine.window()));
+    engine.run(Breakout::new(&resource_pool, engine.window()));
 }

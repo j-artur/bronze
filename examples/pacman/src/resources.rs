@@ -41,6 +41,7 @@ pub enum Fonts {}
 
 pub fn load_image(id: &Images) -> Image {
     use Images::*;
+
     if let Some(image) = match id {
         Icon => todo!("create icon"),
         Cursor => todo!("create cursor"),
