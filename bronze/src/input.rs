@@ -1,4 +1,4 @@
-use sfml::window::Event;
+use sfml::{system::Vector2i, window::Event};
 
 pub use sfml::window::{mouse::Button, Key};
 
@@ -16,7 +16,7 @@ impl Keyboard {
     }
 
     #[inline]
-    pub fn event(&mut self, event: &Event) {
+    pub fn propagate(&mut self, event: &Event) {
         match event {
             Event::KeyPressed { code, .. } if code != &Key::Unknown => {
                 self.keys[*code as usize] = true
@@ -28,19 +28,19 @@ impl Keyboard {
         }
     }
 
-    pub fn key_down(&self, key: Key) -> bool {
+    pub fn is_key_down(&self, key: Key) -> bool {
         self.keys[key as usize]
     }
 
-    pub fn key_up(&self, key: Key) -> bool {
+    pub fn is_key_up(&self, key: Key) -> bool {
         !self.keys[key as usize]
     }
 
-    pub fn key_press(&self, key: Key) -> bool {
+    pub fn is_key_pressed(&self, key: Key) -> bool {
         self.keys[key as usize] && !self.keys_ctrl[key as usize]
     }
 
-    pub fn key_release(&self, key: Key) -> bool {
+    pub fn is_key_released(&self, key: Key) -> bool {
         !self.keys[key as usize] && self.keys_ctrl[key as usize]
     }
 }
@@ -63,7 +63,7 @@ impl Mouse {
     }
 
     #[inline]
-    pub fn event(&mut self, event: &Event) {
+    pub fn propagate(&mut self, event: &Event) {
         match event {
             Event::MouseButtonPressed { button, .. } => self.buttons[*button as usize] = true,
             Event::MouseButtonReleased { button, .. } => self.buttons[*button as usize] = false,
@@ -83,23 +83,23 @@ impl Mouse {
         self.y
     }
 
-    pub fn position(&self) -> (i32, i32) {
-        (self.x, self.y)
+    pub fn position(&self) -> Vector2i {
+        Vector2i::new(self.x, self.y)
     }
 
-    pub fn button_down(&self, button: Button) -> bool {
+    pub fn is_button_down(&self, button: Button) -> bool {
         self.buttons[button as usize]
     }
 
-    pub fn button_up(&self, button: Button) -> bool {
+    pub fn is_button_up(&self, button: Button) -> bool {
         !self.buttons[button as usize]
     }
 
-    pub fn button_press(&self, button: Button) -> bool {
+    pub fn is_button_pressed(&self, button: Button) -> bool {
         self.buttons[button as usize] && !self.buttons_ctrl[button as usize]
     }
 
-    pub fn button_release(&self, button: Button) -> bool {
+    pub fn is_button_released(&self, button: Button) -> bool {
         !self.buttons[button as usize] && self.buttons_ctrl[button as usize]
     }
 }
@@ -118,9 +118,9 @@ impl InputManager {
     }
 
     #[inline]
-    pub fn event(&mut self, event: &Event) {
-        self.keyboard.event(event);
-        self.mouse.event(event);
+    pub fn propagate(&mut self, event: &Event) {
+        self.keyboard.propagate(event);
+        self.mouse.propagate(event);
     }
 
     #[inline]
@@ -130,34 +130,34 @@ impl InputManager {
     }
 
     pub fn key_down(&self, key: Key) -> bool {
-        self.keyboard.key_down(key)
+        self.keyboard.is_key_down(key)
     }
 
     pub fn key_up(&self, key: Key) -> bool {
-        self.keyboard.key_up(key)
+        self.keyboard.is_key_up(key)
     }
 
     pub fn key_press(&self, key: Key) -> bool {
-        self.keyboard.key_press(key)
+        self.keyboard.is_key_pressed(key)
     }
 
     pub fn key_release(&self, key: Key) -> bool {
-        self.keyboard.key_release(key)
+        self.keyboard.is_key_released(key)
     }
 
     pub fn button_down(&self, button: Button) -> bool {
-        self.mouse.button_down(button)
+        self.mouse.is_button_down(button)
     }
 
     pub fn button_up(&self, button: Button) -> bool {
-        self.mouse.button_up(button)
+        self.mouse.is_button_up(button)
     }
 
     pub fn button_press(&self, button: Button) -> bool {
-        self.mouse.button_press(button)
+        self.mouse.is_button_pressed(button)
     }
 
     pub fn button_release(&self, button: Button) -> bool {
-        self.mouse.button_release(button)
+        self.mouse.is_button_released(button)
     }
 }

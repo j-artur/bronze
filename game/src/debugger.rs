@@ -1,34 +1,30 @@
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 use bronze::{
+    graphics::{Color, Text},
     input::{InputManager, Key},
     resources::Font,
     scene::Entity,
-    sfml::graphics::{Color, Text, Transformable},
     shape::ShapeRef,
     window::Canvas,
 };
 
 use crate::GameContext;
 
-pub struct Debugger<'r> {
+pub struct Debugger {
+    text: Text,
     on: bool,
-    total_time: Duration,
+    total_time: f32,
     frames: u32,
-    text: Text<'r>,
 }
 
-impl<'r> Debugger<'r> {
-    pub fn new(on: bool, font: &'r Font, size: u32) -> Self {
-        let mut text = Text::new("", font.sfml_font(), size);
-        text.set_position((10.0, 10.0));
-        text.set_fill_color(Color::WHITE);
-
+impl Debugger {
+    pub fn new(on: bool, font: &Rc<Font>, font_size: u32) -> Self {
         Debugger {
+            text: Text::new(font, font_size, String::new()),
             on,
-            total_time: Duration::from_secs(0),
+            total_time: 0.0,
             frames: 0,
-            text,
         }
     }
 
@@ -37,7 +33,7 @@ impl<'r> Debugger<'r> {
     }
 }
 
-impl Entity for Debugger<'_> {
+impl Entity for Debugger {
     type Ctx = GameContext;
 
     #[inline]
@@ -49,23 +45,25 @@ impl Entity for Debugger<'_> {
 
     #[inline]
     fn update(&mut self, _ctx: &mut GameContext, frame_time: Duration) {
-        self.total_time += frame_time;
-        self.frames += 1;
-        if self.total_time >= Duration::from_millis(250) {
-            self.text.set_string(&format!(
-                "FPS: {:.02}\nFrame Time: {:.02}ms",
-                self.frames as f32 / self.total_time.as_secs_f32(),
-                frame_time.as_secs_f64() * 1000.0
-            ));
-            self.frames = 0;
-            self.total_time = Duration::from_secs(0);
+        if self.on {
+            self.total_time += frame_time.as_secs_f32();
+            self.frames += 1;
+            if self.total_time >= 0.250 {
+                self.text.set_string(format!(
+                    "FPS: {:.02}\nFrame Time: {:.02}ms",
+                    self.frames as f32 / self.total_time,
+                    frame_time.as_secs_f32() * 1000.0
+                ));
+                self.frames = 0;
+                self.total_time = 0.0;
+            }
         }
     }
 
     #[inline]
     fn draw(&self, _ctx: &GameContext, target: &mut Canvas) {
         if self.on {
-            target.draw(&self.text);
+            self.text.draw(target, (10.0, 10.0, Color::WHITE));
         }
     }
 

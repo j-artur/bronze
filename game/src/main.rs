@@ -3,19 +3,14 @@ use std::time::Duration;
 use ball::Ball;
 use block::Block;
 use bronze::{
-    cursor::Cursor,
     engine::Engine,
     game::Game,
-    icon::Icon,
+    graphics::{Color, Sprite},
     input::{InputManager, Key},
-    resources::ResourcePool,
+    resources::{Cursor, Icon, ResourcePool},
     scene::{Collision, Entity, Scene},
-    sfml::{
-        graphics::Color,
-        system::{Vector2, Vector2f},
-    },
     shape::{BBox, ShapeRef},
-    sprite::Sprite,
+    system::{Vector2, Vector2f},
     window::{Canvas, FPSConfig, Window, WindowConfig},
 };
 
@@ -36,12 +31,12 @@ pub struct GameContext {
     pub player_top: Vector2f,
 }
 
-pub enum StaticEntity<'r> {
-    Player(Player<'r>),
-    Block(Block<'r>),
+pub enum StaticEntity {
+    Player(Player),
+    Block(Block),
 }
 
-impl Entity for StaticEntity<'_> {
+impl Entity for StaticEntity {
     type Ctx = GameContext;
 
     #[inline]
@@ -93,9 +88,9 @@ impl Entity for StaticEntity<'_> {
     }
 }
 
-impl<'r> Collision<Ball<'r>> for StaticEntity<'r> {
+impl Collision<Ball> for StaticEntity {
     #[inline]
-    fn on_collision(&mut self, other: &Ball<'r>, ctx: &mut GameContext) {
+    fn on_collision(&mut self, other: &Ball, ctx: &mut GameContext) {
         match self {
             StaticEntity::Player(_) => {}
             StaticEntity::Block(block) => block.on_collision(other, ctx),
@@ -103,33 +98,33 @@ impl<'r> Collision<Ball<'r>> for StaticEntity<'r> {
     }
 }
 
-pub struct MyGame<'r> {
-    bg: Sprite<'r>,
-    debugger: Debugger<'r>,
-    scene: Scene<StaticEntity<'r>, Ball<'r>, GameContext>,
-    player_top: Vector2f,
+pub struct MyGame {
+    bg: Sprite,
+    debugger: Debugger,
+    scene: Scene<StaticEntity, Ball, GameContext>,
+    ctx: GameContext,
     running: bool,
     paused: bool,
 }
 
-impl<'r> MyGame<'r> {
+impl MyGame {
     const LINE1: f32 = 50.0;
     const LINE2: f32 = 80.0;
     const LINE3: f32 = 110.0;
     const LINE4: f32 = 140.0;
     const LINE5: f32 = 170.0;
 
-    fn new(resource_pool: &'r ResourcePool<Images, Audios, Fonts>, window: &Window) -> Self {
+    fn new(resource_pool: &ResourcePool<Images, Audios, Fonts>, window: &Window) -> Self {
         let mut scene = Scene::new();
 
         let background = resource_pool.get_image(Images::Background);
-        let bg = Sprite::new(background);
+        let bg = Sprite::new(&background);
 
         let debug_font = resource_pool.get_font(Fonts::Debug);
-        let debugger = Debugger::new(true, debug_font, 10);
+        let debugger = Debugger::new(false, &debug_font, 10);
 
         let player = resource_pool.get_image(Images::Player);
-        let player = Player::new(player);
+        let player = Player::new(&player);
 
         let player_top = Vector2::new(
             player.bbox().left() + player.bbox().width() / 2.0,
@@ -137,7 +132,7 @@ impl<'r> MyGame<'r> {
         );
 
         let ball = resource_pool.get_image(Images::Ball);
-        let ball = Ball::new(ball, &player);
+        let ball = Ball::new(&ball, &player);
 
         scene.add_static(player);
         scene.add_dynamic(ball);
@@ -148,68 +143,68 @@ impl<'r> MyGame<'r> {
         let tile4 = resource_pool.get_image(Images::Tile4);
         let tile5 = resource_pool.get_image(Images::Tile5);
 
-        scene.add_static(Block::new(tile1, window.center_x() - 350.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() - 270.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() - 190.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() - 110.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() - 30.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() + 50.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() + 130.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() + 210.0, Self::LINE1));
-        scene.add_static(Block::new(tile1, window.center_x() + 290.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() - 350.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() - 270.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() - 190.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() - 110.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() - 30.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() + 50.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() + 130.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() + 210.0, Self::LINE1));
+        scene.add_static(Block::new(&tile1, window.center_x() + 290.0, Self::LINE1));
 
-        scene.add_static(Block::new(tile2, window.center_x() - 350.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() - 270.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() - 190.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() - 110.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() - 30.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() + 50.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() + 130.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() + 210.0, Self::LINE2));
-        scene.add_static(Block::new(tile2, window.center_x() + 290.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() - 350.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() - 270.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() - 190.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() - 110.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() - 30.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() + 50.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() + 130.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() + 210.0, Self::LINE2));
+        scene.add_static(Block::new(&tile2, window.center_x() + 290.0, Self::LINE2));
 
-        scene.add_static(Block::new(tile3, window.center_x() - 350.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() - 270.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() - 190.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() - 110.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() - 30.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() + 50.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() + 130.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() + 210.0, Self::LINE3));
-        scene.add_static(Block::new(tile3, window.center_x() + 290.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() - 350.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() - 270.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() - 190.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() - 110.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() - 30.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() + 50.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() + 130.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() + 210.0, Self::LINE3));
+        scene.add_static(Block::new(&tile3, window.center_x() + 290.0, Self::LINE3));
 
-        scene.add_static(Block::new(tile4, window.center_x() - 350.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() - 270.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() - 190.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() - 110.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() - 30.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() + 50.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() + 130.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() + 210.0, Self::LINE4));
-        scene.add_static(Block::new(tile4, window.center_x() + 290.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() - 350.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() - 270.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() - 190.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() - 110.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() - 30.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() + 50.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() + 130.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() + 210.0, Self::LINE4));
+        scene.add_static(Block::new(&tile4, window.center_x() + 290.0, Self::LINE4));
 
-        scene.add_static(Block::new(tile5, window.center_x() - 350.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() - 270.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() - 190.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() - 110.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() - 30.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() + 50.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() + 130.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() + 210.0, Self::LINE5));
-        scene.add_static(Block::new(tile5, window.center_x() + 290.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() - 350.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() - 270.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() - 190.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() - 110.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() - 30.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() + 50.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() + 130.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() + 210.0, Self::LINE5));
+        scene.add_static(Block::new(&tile5, window.center_x() + 290.0, Self::LINE5));
 
         MyGame {
             bg,
             debugger,
             scene,
-            player_top,
+            ctx: GameContext { player_top },
             running: true,
             paused: false,
         }
     }
 }
 
-impl Game for MyGame<'_> {
+impl Game for MyGame {
     #[inline]
     fn is_running(&self) -> bool {
         self.running
@@ -234,46 +229,33 @@ impl Game for MyGame<'_> {
     #[inline]
     fn pre_update(&mut self, _engine: &Engine) {
         if !self.paused {
-            let ctx = GameContext {
-                player_top: self.player_top,
-            };
-            self.scene.pre_update(&ctx);
-            self.debugger.pre_update(&ctx);
+            self.scene.pre_update(&self.ctx);
+            self.debugger.pre_update(&self.ctx);
         }
     }
 
     #[inline]
-    fn update(&mut self, _engine: &mut Engine, delta: Duration) {
+    fn update(&mut self, _engine: &mut Engine, frame_time: Duration) {
         if !self.paused {
-            let mut ctx = GameContext {
-                player_top: self.player_top,
-            };
-            self.scene.update(&mut ctx, delta);
-            self.debugger.update(&mut ctx, delta);
-            self.player_top = ctx.player_top;
+            self.scene.update(&mut self.ctx, frame_time);
+            self.debugger.update(&mut self.ctx, frame_time);
+            self.scene.collisions(&mut self.ctx);
         }
     }
 
     #[inline]
     fn post_update(&mut self, _engine: &Engine) {
         if !self.paused {
-            let mut ctx = GameContext {
-                player_top: self.player_top,
-            };
-            self.scene.collisions(&mut ctx);
-            self.player_top = ctx.player_top;
-            self.scene.post_update(&ctx);
-            self.debugger.post_update(&ctx);
+            self.scene.post_update(&self.ctx);
+            self.debugger.post_update(&self.ctx);
         }
     }
 
     #[inline]
     fn draw(&self, target: &mut Canvas) {
-        self.bg.draw(target, (0.0, 0.0), 0.0, 1.0);
-        let ctx = GameContext {
-            player_top: self.player_top,
-        };
-        self.scene.draw(&ctx, target);
+        self.bg.draw(target, (0.0, 0.0));
+        self.scene.draw(&self.ctx, target);
+        self.debugger.draw(&self.ctx, target);
     }
 }
 
@@ -282,8 +264,8 @@ fn main() {
 
     let win_config = WindowConfig {
         title: "My Game".to_string(),
-        icon: Some(Icon::from_image(resource_pool.get_image(Images::Icon))),
-        cursor: Cursor::from_image(resource_pool.get_image(Images::Cursor)),
+        icon: Some(Icon::from_image(&resource_pool.get_image(Images::Icon))),
+        cursor: Cursor::from_image(&resource_pool.get_image(Images::Cursor)),
         bg_color: Color::BLACK,
         show_cursor: true,
         fps_config: FPSConfig::Unlimited,
@@ -292,6 +274,5 @@ fn main() {
 
     let mut engine = Engine::new(Window::new(win_config));
 
-    let game = MyGame::new(&resource_pool, engine.window());
-    engine.run(game);
+    engine.run(MyGame::new(&resource_pool, engine.window()));
 }

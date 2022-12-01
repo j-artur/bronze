@@ -1,13 +1,13 @@
-pub mod cursor;
 pub mod engine;
 pub mod game;
-pub mod icon;
+pub mod graphics;
 pub mod input;
 pub mod resources;
 pub mod scene;
 pub mod shape;
-pub mod sprite;
 pub mod timer;
 pub mod window;
 
-pub use sfml;
+pub mod system {
+    pub use sfml::system::{Vector2, Vector2f, Vector2i, Vector2u};
+}

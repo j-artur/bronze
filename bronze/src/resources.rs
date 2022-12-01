@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use sfml::SfBox;
 
 mod image {
@@ -74,7 +76,7 @@ mod font {
 pub use font::*;
 
 mod resource_pool {
-    use std::{collections::HashMap, fmt::Debug, hash::Hash};
+    use std::{collections::HashMap, fmt::Debug, hash::Hash, rc::Rc};
 
     use once_cell::unsync::OnceCell;
     use strum::IntoEnumIterator;
@@ -85,9 +87,9 @@ mod resource_pool {
     impl<T> Key for T where T: IntoEnumIterator + Debug + Eq + Hash {}
 
     pub struct ResourcePool<I: Key, A: Key, F: Key> {
-        images: HashMap<I, OnceCell<Image>>,
-        audios: HashMap<A, OnceCell<Audio>>,
-        fonts: HashMap<F, OnceCell<Font>>,
+        images: HashMap<I, OnceCell<Rc<Image>>>,
+        audios: HashMap<A, OnceCell<Rc<Audio>>>,
+        fonts: HashMap<F, OnceCell<Rc<Font>>>,
         load_image: fn(&I) -> Image,
         load_audio: fn(&A) -> Audio,
         load_font: fn(&F) -> Font,
@@ -125,26 +127,74 @@ mod resource_pool {
             }
         }
 
-        pub fn get_image(&self, id: I) -> &Image {
-            self.images
-                .get(&id)
-                .unwrap()
-                .get_or_init(|| (self.load_image)(&id))
+        pub fn get_image(&self, id: I) -> Rc<Image> {
+            let cell = self.images.get(&id).unwrap();
+            Rc::clone(cell.get_or_init(|| Rc::new((self.load_image)(&id))))
         }
 
-        pub fn get_audio(&self, id: A) -> &Audio {
-            self.audios
-                .get(&id)
-                .unwrap()
-                .get_or_init(|| (self.load_audio)(&id))
+        pub fn get_audio(&self, id: A) -> Rc<Audio> {
+            let cell = self.audios.get(&id).unwrap();
+            Rc::clone(cell.get_or_init(|| Rc::new((self.load_audio)(&id))))
         }
 
-        pub fn get_font(&self, id: F) -> &Font {
-            self.fonts
-                .get(&id)
-                .unwrap()
-                .get_or_init(|| (self.load_font)(&id))
+        pub fn get_font(&self, id: F) -> Rc<Font> {
+            let cell = self.fonts.get(&id).unwrap();
+            Rc::clone(cell.get_or_init(|| Rc::new((self.load_font)(&id))))
         }
     }
 }
 pub use resource_pool::*;
+
+mod cursor {
+    use sfml::window::Cursor as SfmlCursor;
+
+    use super::*;
+
+    pub struct Cursor {
+        _image: Rc<Image>,
+        cursor: SfBox<SfmlCursor>,
+    }
+
+    impl Cursor {
+        pub fn from_image(image: &Rc<Image>) -> Option<Self> {
+            unsafe { SfmlCursor::from_pixels(image.pixels(), image.size(), image.size() / 2) }.map(
+                |cursor| Cursor {
+                    _image: Rc::clone(image),
+                    cursor,
+                },
+            )
+        }
+
+        pub fn cursor(&self) -> &SfmlCursor {
+            &self.cursor
+        }
+    }
+}
+pub use cursor::*;
+
+mod icon {
+    use sfml::system::Vector2u;
+
+    use super::*;
+
+    pub struct Icon {
+        image: Rc<Image>,
+    }
+
+    impl Icon {
+        pub fn from_image(image: &Rc<Image>) -> Self {
+            Icon {
+                image: Rc::clone(image),
+            }
+        }
+
+        pub fn size(&self) -> Vector2u {
+            self.image.size()
+        }
+
+        pub fn pixels(&self) -> &[u8] {
+            self.image.pixels()
+        }
+    }
+}
+pub use icon::*;

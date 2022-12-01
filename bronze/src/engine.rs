@@ -4,13 +4,13 @@ use sfml::window::Event;
 
 use crate::{game::Game, input::InputManager, timer::Timer, window::Window};
 
-pub struct Engine<'r> {
-    window: Window<'r>,
+pub struct Engine {
+    window: Window,
     input: InputManager,
     timer: Timer,
 }
 
-impl<'r> Engine<'r> {
+impl Engine {
     pub fn new(window: Window) -> Engine {
         Engine {
             window,
@@ -23,7 +23,7 @@ impl<'r> Engine<'r> {
         &self.window
     }
 
-    pub fn window_mut(&mut self) -> &'r mut Window {
+    pub fn window_mut(&mut self) -> &mut Window {
         &mut self.window
     }
 
@@ -40,12 +40,12 @@ impl<'r> Engine<'r> {
                     Event::Closed => self.window.close(),
                     _ => {}
                 }
-                self.input.event(&event);
+                self.input.propagate(&event);
             }
 
             game.input(&self.input);
 
-            let frame_time = self.timer.reset().min(Duration::from_secs_f64(1.0 / 30.0));
+            let frame_time = self.timer.reset().min(Duration::from_secs_f32(1.0 / 30.0));
 
             game.pre_update(&self);
             game.update(self, frame_time);

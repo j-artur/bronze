@@ -1,9 +1,10 @@
 use sfml::{
     graphics::{Color, Drawable, RenderTarget, RenderWindow},
+    system::Vector2u,
     window::{Event, Style, VideoMode},
 };
 
-use crate::{cursor::Cursor, icon::Icon};
+use crate::resources::{Cursor, Icon};
 
 pub enum FPSConfig {
     VSync,
@@ -16,23 +17,32 @@ pub enum WindowMode {
     Windowed { width: u32, height: u32 },
 }
 
+impl From<Vector2u> for WindowMode {
+    fn from(Vector2u { x, y }: Vector2u) -> Self {
+        WindowMode::Windowed {
+            width: x,
+            height: y,
+        }
+    }
+}
+
 impl From<(u32, u32)> for WindowMode {
     fn from((width, height): (u32, u32)) -> Self {
         WindowMode::Windowed { width, height }
     }
 }
 
-pub struct WindowConfig<'r> {
+pub struct WindowConfig {
     pub title: String,
-    pub icon: Option<Icon<'r>>,
-    pub cursor: Option<Cursor<'r>>,
+    pub icon: Option<Icon>,
+    pub cursor: Option<Cursor>,
     pub bg_color: Color,
     pub show_cursor: bool,
     pub fps_config: FPSConfig,
     pub mode: WindowMode,
 }
 
-impl Default for WindowConfig<'_> {
+impl Default for WindowConfig {
     fn default() -> Self {
         WindowConfig {
             title: String::new(),
@@ -56,13 +66,13 @@ impl Canvas<'_> {
     }
 }
 
-pub struct Window<'r> {
+pub struct Window {
     sfml_window: RenderWindow,
-    config: WindowConfig<'r>,
+    config: WindowConfig,
 }
 
-impl<'r> Window<'r> {
-    pub fn new(config: WindowConfig<'r>) -> Self {
+impl Window {
+    pub fn new(config: WindowConfig) -> Self {
         let (sfml_mode, sfml_style) = match config.mode {
             WindowMode::Fullscreen => (VideoMode::desktop_mode(), Style::NONE),
             WindowMode::Windowed { width, height } => (

@@ -1,28 +1,28 @@
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 use bronze::{
+    graphics::Sprite,
     input::{InputManager, Key},
     resources::Image,
     scene::{Collision, Entity},
-    sfml::system::Vector2,
     shape::{BBox, Circle, Movable, ShapeRef},
-    sprite::Sprite,
+    system::Vector2,
     window::Canvas,
 };
 
 use crate::{GameContext, Player, StaticEntity, WINDOW_HEIGHT, WINDOW_WIDTH};
 
-pub struct Ball<'r> {
-    sprite: Sprite<'r>,
+pub struct Ball {
+    sprite: Sprite,
     velocity: Vector2<f32>,
     moving: bool,
-    hitbox: Circle,
+    bbox: Circle,
 }
 
-impl<'r> Ball<'r> {
+impl Ball {
     const SPEED: f32 = 480.0;
 
-    pub fn new(image: &'r Image, player: &Player) -> Self {
+    pub fn new(image: &Rc<Image>, player: &Player) -> Self {
         let Vector2 { x, y } = image.size();
 
         let width = x as f32;
@@ -31,7 +31,7 @@ impl<'r> Ball<'r> {
         let x = player.bbox().center_x() - width / 2.0;
         let y = player.bbox().top() - height;
 
-        let hitbox = Circle {
+        let bbox = Circle {
             x,
             y,
             radius: width / 2.0,
@@ -40,22 +40,22 @@ impl<'r> Ball<'r> {
         Ball {
             sprite: Sprite::new(image),
             velocity: Vector2::new(0.0, 0.0),
-            hitbox,
+            bbox,
             moving: false,
         }
     }
 }
 
-impl<'r> Collision<Ball<'r>> for Ball<'r> {
-    fn on_collision(&mut self, _other: &Ball<'r>, _ctx: &mut GameContext) {}
+impl Collision<Ball> for Ball {
+    fn on_collision(&mut self, _other: &Ball, _ctx: &mut GameContext) {}
 }
 
-impl Entity for Ball<'_> {
+impl Entity for Ball {
     type Ctx = GameContext;
 
     #[inline]
     fn bbox(&self) -> ShapeRef {
-        self.hitbox.as_ref()
+        self.bbox.as_ref()
     }
 
     #[inline]
@@ -69,27 +69,23 @@ impl Entity for Ball<'_> {
     #[inline]
     fn update(&mut self, _ctx: &mut GameContext, frame_time: Duration) {
         let velocity = self.velocity * frame_time.as_secs_f32();
-        self.hitbox.move_by(velocity.x, velocity.y);
+        self.bbox.move_by(velocity.x, velocity.y);
 
-        if self.hitbox.x < 0.0 {
-            self.hitbox.move_by(-self.hitbox.x, 0.0);
+        if self.bbox.x < 0.0 {
+            self.bbox.move_by(-self.bbox.x, 0.0);
             self.velocity.x = -self.velocity.x;
-        } else if self.hitbox.x + self.hitbox.width() > WINDOW_WIDTH as f32 {
-            self.hitbox.move_by(
-                WINDOW_WIDTH as f32 - self.hitbox.x - self.hitbox.width(),
-                0.0,
-            );
+        } else if self.bbox.x + self.bbox.width() > WINDOW_WIDTH as f32 {
+            self.bbox
+                .move_by(WINDOW_WIDTH as f32 - self.bbox.x - self.bbox.width(), 0.0);
             self.velocity.x = -self.velocity.x;
         }
 
-        if self.hitbox.y < 0.0 {
-            self.hitbox.move_by(0.0, -self.hitbox.y);
+        if self.bbox.y < 0.0 {
+            self.bbox.move_by(0.0, -self.bbox.y);
             self.velocity.y = -self.velocity.y;
-        } else if self.hitbox.y + self.hitbox.height() > WINDOW_HEIGHT as f32 {
-            self.hitbox.move_by(
-                0.0,
-                WINDOW_HEIGHT as f32 - self.hitbox.y - self.hitbox.height(),
-            );
+        } else if self.bbox.y + self.bbox.height() > WINDOW_HEIGHT as f32 {
+            self.bbox
+                .move_by(0.0, WINDOW_HEIGHT as f32 - self.bbox.y - self.bbox.height());
             self.velocity.y = -self.velocity.y;
         }
     }
@@ -97,61 +93,61 @@ impl Entity for Ball<'_> {
     #[inline]
     fn post_update(&mut self, ctx: &GameContext) {
         if !self.moving {
-            self.hitbox.set_position(
-                ctx.player_top.x - self.hitbox.width() / 2.0,
-                ctx.player_top.y - self.hitbox.height(),
+            self.bbox.set_position(
+                ctx.player_top.x - self.bbox.width() / 2.0,
+                ctx.player_top.y - self.bbox.height(),
             );
         }
     }
 
     #[inline]
     fn draw(&self, _ctx: &GameContext, target: &mut Canvas) {
-        self.sprite.draw(target, self.hitbox.position(), 0.0, 1.0);
+        self.sprite.draw(target, self.bbox.position());
     }
 }
 
-impl Collision<StaticEntity<'_>> for Ball<'_> {
+impl Collision<StaticEntity> for Ball {
     #[inline]
-    fn on_collision(&mut self, other: &StaticEntity<'_>, _ctx: &mut GameContext) {
+    fn on_collision(&mut self, other: &StaticEntity, _ctx: &mut GameContext) {
         match other {
             StaticEntity::Player(player) => {
-                let left = self.hitbox.right() > player.bbox().left()
-                    && self.hitbox.left() < player.bbox().left();
-                let right = self.hitbox.left() < player.bbox().right()
-                    && self.hitbox.right() > player.bbox().right();
-                let top = self.hitbox.bottom() > player.bbox().top()
-                    && self.hitbox.top() < player.bbox().top();
-                let bottom = self.hitbox.top() < player.bbox().bottom()
-                    && self.hitbox.bottom() > player.bbox().bottom();
+                let left = self.bbox.right() > player.bbox().left()
+                    && self.bbox.left() < player.bbox().left();
+                let right = self.bbox.left() < player.bbox().right()
+                    && self.bbox.right() > player.bbox().right();
+                let top = self.bbox.bottom() > player.bbox().top()
+                    && self.bbox.top() < player.bbox().top();
+                let bottom = self.bbox.top() < player.bbox().bottom()
+                    && self.bbox.bottom() > player.bbox().bottom();
 
                 if left {
-                    self.hitbox
-                        .move_by(player.bbox().left() - self.hitbox.right(), 0.0);
+                    self.bbox
+                        .move_by(player.bbox().left() - self.bbox.right(), 0.0);
                     self.velocity.x = -self.velocity.x;
                 }
 
                 if right {
-                    self.hitbox
-                        .move_by(player.bbox().right() - self.hitbox.left(), 0.0);
+                    self.bbox
+                        .move_by(player.bbox().right() - self.bbox.left(), 0.0);
                     self.velocity.x = -self.velocity.x;
                 }
 
                 if top {
-                    self.hitbox
-                        .move_by(0.0, player.bbox().top() - self.hitbox.bottom());
+                    self.bbox
+                        .move_by(0.0, player.bbox().top() - self.bbox.bottom());
                     self.velocity.y = -self.velocity.y;
                 }
 
                 if bottom {
-                    self.hitbox
-                        .move_by(0.0, player.bbox().bottom() - self.hitbox.top());
+                    self.bbox
+                        .move_by(0.0, player.bbox().bottom() - self.bbox.top());
                     self.velocity.y = -self.velocity.y;
                 }
             }
             StaticEntity::Block(block) => {
                 if !block.is_falling() {
                     let block = block.bbox();
-                    let ball = &self.hitbox;
+                    let ball = &self.bbox;
 
                     if ball.right() > block.left() && ball.left() < block.left()
                         || ball.left() < block.right() && ball.right() > block.right()

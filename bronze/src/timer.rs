@@ -26,7 +26,7 @@ impl Timer {
         Instant::now() - self.last_instant
     }
 
-    pub fn has_elapsed(&self, duration: Duration) -> bool {
-        self.elapsed() >= duration
+    pub fn has_elapsed(&self, time: Duration) -> bool {
+        self.elapsed() >= time
     }
 }
