@@ -3,11 +3,6 @@ use sfml::system::Vector2f;
 mod prelude {
     use super::*;
 
-    pub trait Movable {
-        fn set_position(&mut self, x: f32, y: f32);
-        fn move_by(&mut self, x: f32, y: f32);
-    }
-
     pub trait BBox
     where
         Self: Sized,
@@ -61,6 +56,37 @@ mod prelude {
         }
 
         fn intersects<B: BBox>(&self, other: &B) -> bool;
+    }
+
+    pub trait Movable: BBox {
+        fn set_position(&mut self, x: f32, y: f32);
+
+        #[inline]
+        fn set_center(&mut self, x: f32, y: f32) {
+            self.set_position(x - self.width() / 2.0, y - self.height() / 2.0);
+        }
+
+        #[inline]
+        fn set_left(&mut self, x: f32) {
+            self.set_position(x, self.top());
+        }
+
+        #[inline]
+        fn set_top(&mut self, y: f32) {
+            self.set_position(self.left(), y);
+        }
+
+        #[inline]
+        fn set_right(&mut self, x: f32) {
+            self.set_position(x - self.width(), self.top());
+        }
+
+        #[inline]
+        fn set_bottom(&mut self, y: f32) {
+            self.set_position(self.left(), y - self.height());
+        }
+
+        fn move_by(&mut self, x: f32, y: f32);
     }
 
     pub trait ShapeCollision {
@@ -425,7 +451,7 @@ mod mixed {
     }
 
     pub struct Mixed<'b> {
-        pub geometries: Vec<&'b Shape>,
+        pub geometries: &'b [&'b Shape],
     }
 
     impl Shape {

@@ -28,19 +28,23 @@ impl Keyboard {
         }
     }
 
-    pub fn is_key_down(&self, key: Key) -> bool {
+    #[inline]
+    pub fn key_down(&self, key: Key) -> bool {
         self.keys[key as usize]
     }
 
-    pub fn is_key_up(&self, key: Key) -> bool {
+    #[inline]
+    pub fn key_up(&self, key: Key) -> bool {
         !self.keys[key as usize]
     }
 
-    pub fn is_key_pressed(&self, key: Key) -> bool {
+    #[inline]
+    pub fn key_pressed(&self, key: Key) -> bool {
         self.keys[key as usize] && !self.keys_ctrl[key as usize]
     }
 
-    pub fn is_key_released(&self, key: Key) -> bool {
+    #[inline]
+    pub fn key_released(&self, key: Key) -> bool {
         !self.keys[key as usize] && self.keys_ctrl[key as usize]
     }
 }
@@ -75,31 +79,38 @@ impl Mouse {
         }
     }
 
+    #[inline]
     pub fn x(&self) -> i32 {
         self.x
     }
 
+    #[inline]
     pub fn y(&self) -> i32 {
         self.y
     }
 
+    #[inline]
     pub fn position(&self) -> Vector2i {
         Vector2i::new(self.x, self.y)
     }
 
-    pub fn is_button_down(&self, button: Button) -> bool {
+    #[inline]
+    pub fn button_down(&self, button: Button) -> bool {
         self.buttons[button as usize]
     }
 
-    pub fn is_button_up(&self, button: Button) -> bool {
+    #[inline]
+    pub fn button_up(&self, button: Button) -> bool {
         !self.buttons[button as usize]
     }
 
-    pub fn is_button_pressed(&self, button: Button) -> bool {
+    #[inline]
+    pub fn button_pressed(&self, button: Button) -> bool {
         self.buttons[button as usize] && !self.buttons_ctrl[button as usize]
     }
 
-    pub fn is_button_released(&self, button: Button) -> bool {
+    #[inline]
+    pub fn button_released(&self, button: Button) -> bool {
         !self.buttons[button as usize] && self.buttons_ctrl[button as usize]
     }
 }
@@ -110,6 +121,7 @@ pub struct InputManager {
 }
 
 impl InputManager {
+    #[inline]
     pub fn new() -> InputManager {
         InputManager {
             keyboard: Keyboard::new(),
@@ -129,35 +141,43 @@ impl InputManager {
         self.mouse.buttons_ctrl = self.mouse.buttons;
     }
 
+    #[inline]
     pub fn key_down(&self, key: Key) -> bool {
-        self.keyboard.is_key_down(key)
+        self.keyboard.key_down(key)
     }
 
+    #[inline]
     pub fn key_up(&self, key: Key) -> bool {
-        self.keyboard.is_key_up(key)
+        self.keyboard.key_up(key)
     }
 
-    pub fn key_press(&self, key: Key) -> bool {
-        self.keyboard.is_key_pressed(key)
+    #[inline]
+    pub fn key_pressed(&self, key: Key) -> bool {
+        self.keyboard.key_pressed(key)
     }
 
-    pub fn key_release(&self, key: Key) -> bool {
-        self.keyboard.is_key_released(key)
+    #[inline]
+    pub fn key_released(&self, key: Key) -> bool {
+        self.keyboard.key_released(key)
     }
 
+    #[inline]
     pub fn button_down(&self, button: Button) -> bool {
-        self.mouse.is_button_down(button)
+        self.mouse.button_down(button)
     }
 
+    #[inline]
     pub fn button_up(&self, button: Button) -> bool {
-        self.mouse.is_button_up(button)
+        self.mouse.button_up(button)
     }
 
-    pub fn button_press(&self, button: Button) -> bool {
-        self.mouse.is_button_pressed(button)
+    #[inline]
+    pub fn button_pressed(&self, button: Button) -> bool {
+        self.mouse.button_pressed(button)
     }
 
-    pub fn button_release(&self, button: Button) -> bool {
-        self.mouse.is_button_released(button)
+    #[inline]
+    pub fn button_released(&self, button: Button) -> bool {
+        self.mouse.button_released(button)
     }
 }

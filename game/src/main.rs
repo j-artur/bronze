@@ -212,7 +212,7 @@ impl Game for MyGame {
 
     #[inline]
     fn input(&mut self, input: &InputManager) {
-        if input.key_press(Key::P) {
+        if input.key_pressed(Key::P) {
             self.paused = !self.paused;
         }
 

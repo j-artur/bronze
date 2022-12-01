@@ -38,7 +38,7 @@ impl Entity for Debugger {
 
     #[inline]
     fn input(&mut self, input: &InputManager) {
-        if input.key_press(Key::F) && input.key_down(Key::LControl) {
+        if input.key_pressed(Key::F) && input.key_down(Key::LControl) {
             self.toggle();
         }
     }
