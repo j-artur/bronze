@@ -3,9 +3,9 @@ use std::rc::Rc;
 pub use sfml::graphics::Color;
 use sfml::{graphics::Transformable, system::Vector2f};
 
-use crate::window::Canvas;
+use crate::{shape::Point, window::Canvas};
 
-type Position = Vector2f;
+type Position = Point;
 type X = f32;
 type Y = f32;
 type Rotation = f32;
@@ -16,7 +16,10 @@ mod sprite {
 
     use sfml::graphics::{Sprite as SfmlSprite, Texture};
 
-    use crate::resources::Image;
+    use crate::{
+        resources::Image,
+        shape::{BBox, Point},
+    };
 
     pub trait DrawArgs {
         fn position(&self) -> Position;
@@ -27,7 +30,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Rotation, Scale, Color) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -45,7 +48,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Rotation, Scale) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -63,7 +66,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Rotation, Color) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -81,7 +84,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Scale, Color) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -99,7 +102,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Rotation) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -117,7 +120,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Scale) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -135,7 +138,7 @@ mod sprite {
 
     impl DrawArgs for (Position, Color) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn rotation(&self) -> Rotation {
@@ -171,7 +174,7 @@ mod sprite {
 
     impl DrawArgs for (X, Y) {
         fn position(&self) -> Position {
-            Vector2f::new(self.0, self.1)
+            Point::new(self.0, self.1)
         }
 
         fn rotation(&self) -> Rotation {
@@ -187,6 +190,7 @@ mod sprite {
         }
     }
 
+    #[derive(Clone)]
     pub struct Sprite {
         image: Rc<Image>,
     }
@@ -210,6 +214,36 @@ mod sprite {
             sprite_data.set_rotation(args.rotation());
             sprite_data.set_scale(args.scale());
             sprite_data.set_color(args.color());
+            target.draw(&sprite_data);
+        }
+
+        #[inline]
+        pub fn draw_centered<Args: DrawArgs>(&self, target: &mut Canvas, args: Args) {
+            let size = self.image.size();
+
+            let x = args.position().x - size.x as f32 / 2.0;
+            let y = args.position().y - size.y as f32 / 2.0;
+
+            let mut sprite_data = SfmlSprite::with_texture(self.image.texture());
+            sprite_data.set_position(Vector2f::new(x, y));
+            sprite_data.set_rotation(args.rotation());
+            sprite_data.set_scale(args.scale());
+            sprite_data.set_color(args.color());
+            target.draw(&sprite_data);
+        }
+
+        #[inline]
+        pub fn draw_on_bbox<B: BBox>(&self, target: &mut Canvas, bbox: &B) {
+            let x = bbox.left();
+            let y = bbox.top();
+            let size = self.image.size();
+
+            let scale_x = bbox.width() / size.x as f32;
+            let scale_y = bbox.height() / size.y as f32;
+
+            let mut sprite_data = SfmlSprite::with_texture(self.image.texture());
+            sprite_data.set_position(Vector2f::new(x, y));
+            sprite_data.set_scale(Vector2f::new(scale_x, scale_y));
             target.draw(&sprite_data);
         }
 
@@ -240,14 +274,14 @@ mod text {
     use super::*;
 
     pub trait WriteArgs {
-        fn position(&self) -> Vector2f;
+        fn position(&self) -> Position;
         fn color(&self) -> Color;
         fn rotation(&self) -> f32;
     }
 
     impl WriteArgs for (Position, Color, Rotation) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn color(&self) -> Color {
@@ -261,7 +295,7 @@ mod text {
 
     impl WriteArgs for (Position, Color) {
         fn position(&self) -> Position {
-            self.0
+            self.0.clone()
         }
 
         fn color(&self) -> Color {
@@ -275,7 +309,7 @@ mod text {
 
     impl WriteArgs for (X, Y, Color) {
         fn position(&self) -> Position {
-            Vector2f::new(self.0, self.1)
+            Point::new(self.0, self.1)
         }
 
         fn color(&self) -> Color {

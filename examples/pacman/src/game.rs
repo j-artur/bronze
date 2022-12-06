@@ -2,66 +2,148 @@ use std::{fs::read_to_string, time::Duration};
 
 use bronze::{
     engine::Engine, game::Game as BronzeGame, graphics::Sprite, input::InputManager, input::Key,
-    scene::Scene, window::Canvas,
+    scene::Scene, shape::Point, window::Canvas,
 };
+use rand::seq::SliceRandom;
 
 use crate::{
-    entities::{DynamicEntity, GameCtx, Pacman, Pivot, StaticEntity},
+    entities::{DynamicEntity, Food, Ghost, Pacman, Pivot, Special, StaticEntity},
     resources::*,
     Pool,
 };
 
-pub enum Levels {
-    TitleScreen,
-    Level1,
-    Level2,
-    EndScreen,
-    GameOver,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dir {
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
-trait Level: BronzeGame {
-    fn next_level(&self) -> Option<Levels>;
+impl Dir {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Dir::Up => Dir::Down,
+            Dir::Down => Dir::Up,
+            Dir::Left => Dir::Right,
+            Dir::Right => Dir::Left,
+        }
+    }
+
+    pub fn random_dirs() -> [Self; 4] {
+        let mut dirs = [Dir::Up, Dir::Down, Dir::Left, Dir::Right];
+        dirs.shuffle(&mut rand::thread_rng());
+        dirs
+    }
 }
 
-pub fn read_pivots(path: &str) -> Option<Vec<(bool, bool, bool, bool, u32, u32)>> {
-    let content = read_to_string(path).ok()?;
-    content
-        .lines()
-        .filter(|line| !line.starts_with('#') && !line.is_empty())
-        .map(|line| {
+#[derive(Clone)]
+pub struct GameCtx {
+    pub score: u32,
+    pub pacman_alive: bool,
+    pub food_count: u32,
+    pub pacman_center: Point,
+    pub pacman_sprites: PacmanSprites,
+    pub ghost_sprites: GhostSprites,
+}
+
+impl GameCtx {
+    pub fn new(resource_pool: &Pool) -> GameCtx {
+        GameCtx {
+            score: 0,
+            pacman_alive: true,
+            pacman_center: Point::new(0.0, 0.0),
+            pacman_sprites: PacmanSprites::new(resource_pool),
+            ghost_sprites: GhostSprites::new(resource_pool),
+            food_count: 0,
+        }
+    }
+}
+
+mod level {
+    use super::*;
+
+    pub enum Levels {
+        TitleScreen,
+        Level1,
+        Level2,
+    }
+
+    pub trait Level {
+        fn is_running(&self) -> bool;
+
+        fn input(&mut self, input: &InputManager) {
+            let _ = input;
+        }
+
+        fn pre_update(&mut self, ctx: &GameCtx) {
+            let _ = ctx;
+        }
+
+        fn update(&mut self, ctx: &mut GameCtx, frame_time: Duration) {
+            let _ = (ctx, frame_time);
+        }
+
+        fn post_update(&mut self, ctx: &GameCtx) {
+            let _ = ctx;
+        }
+
+        fn draw(&self, ctx: &GameCtx, target: &mut Canvas) {
+            let _ = (ctx, target);
+        }
+
+        fn next_level(&self) -> Option<Levels>;
+    }
+
+    pub fn char_to_bool(char: char) -> Option<bool> {
+        match char {
+            'T' | 't' => Some(true),
+            'F' | 'f' => Some(false),
+            _ => None,
+        }
+    }
+
+    pub fn read_pivots(path: &str) -> Option<Vec<(bool, bool, bool, bool, u32, u32)>> {
+        let content = read_to_string(path).ok()?;
+        content
+            .lines()
+            .filter(|line| !line.starts_with('#') && !line.is_empty())
+            .map(|line| {
+                let mut parts = line.split_whitespace();
+
+                let up = char_to_bool(parts.next()?.parse::<char>().ok()?)?;
+                let down = char_to_bool(parts.next()?.parse::<char>().ok()?)?;
+                let left = char_to_bool(parts.next()?.parse::<char>().ok()?)?;
+                let right = char_to_bool(parts.next()?.parse::<char>().ok()?)?;
+                let x = parts.next()?.parse::<u32>().ok()?;
+                let y = parts.next()?.parse::<u32>().ok()?;
+
+                Some((up, down, left, right, x, y))
+            })
+            .collect()
+    }
+
+    pub fn read_positions(path: &str) -> Option<Vec<(u32, u32)>> {
+        let str = read_to_string(path).ok()?;
+        let lines = str
+            .lines()
+            .filter(|line| !line.starts_with('#') && !line.is_empty());
+
+        let mut positions = Vec::new();
+
+        for line in lines {
             let mut parts = line.split_whitespace();
 
-            let up = parts.next()?.parse::<u8>().ok()? != 0;
-            let down = parts.next()?.parse::<u8>().ok()? != 0;
-            let left = parts.next()?.parse::<u8>().ok()? != 0;
-            let right = parts.next()?.parse::<u8>().ok()? != 0;
             let x = parts.next()?.parse::<u32>().ok()?;
             let y = parts.next()?.parse::<u32>().ok()?;
 
-            Some((up, down, left, right, x, y))
-        })
-        .collect()
-}
+            positions.push((x, y));
+        }
 
-pub fn read_foods(path: &str) -> Option<Vec<(u32, u32)>> {
-    let str = read_to_string(path).ok()?;
-    let lines = str
-        .lines()
-        .filter(|line| !line.starts_with('#') && !line.is_empty());
-
-    let mut foods = Vec::new();
-
-    for line in lines {
-        let mut parts = line.split_whitespace();
-
-        let x = parts.next()?.parse::<u32>().ok()?;
-        let y = parts.next()?.parse::<u32>().ok()?;
-
-        foods.push((x, y));
+        Some(positions)
     }
-
-    Some(foods)
 }
+pub use level::*;
 
 mod title_screen {
     use super::*;
@@ -84,7 +166,7 @@ mod title_screen {
         }
     }
 
-    impl BronzeGame for TitleScreen {
+    impl Level for TitleScreen {
         fn is_running(&self) -> bool {
             self.running
         }
@@ -98,14 +180,12 @@ mod title_screen {
             }
         }
 
-        fn update(&mut self, _engine: &mut Engine, _frame_time: Duration) {}
+        fn update(&mut self, _ctx: &mut GameCtx, _frame_time: Duration) {}
 
-        fn draw(&self, target: &mut Canvas) {
+        fn draw(&self, _ctx: &GameCtx, target: &mut Canvas) {
             self.bg.draw(target, (0.0, 0.0));
         }
-    }
 
-    impl Level for TitleScreen {
         fn next_level(&self) -> Option<Levels> {
             self.next.then_some(Levels::Level1)
         }
@@ -124,16 +204,39 @@ mod level1 {
     }
 
     impl Level1 {
-        pub fn new(resource_pool: &Pool) -> Box<Self> {
+        pub fn new(resource_pool: &Pool, ctx: &mut GameCtx) -> Box<Self> {
             let bg = Sprite::new(&resource_pool.get_image(Images::Level1Bg));
 
             let mut scene = Scene::new();
 
-            scene.add_dynamic(Pacman::new(480, 450, resource_pool));
+            scene.add_dynamic(Pacman::new(480, 450));
+
+            scene.add_dynamic(Ghost::new(405, 360, GhostColor::Blue));
+            scene.add_dynamic(Ghost::new(455, 340, GhostColor::Orange));
+            scene.add_dynamic(Ghost::new(505, 340, GhostColor::Pink));
+            scene.add_dynamic(Ghost::new(555, 360, GhostColor::Red));
 
             if let Some(pivots) = read_pivots("examples/pacman/assets/levels/level1_pivots.txt") {
                 for (up, down, left, right, x, y) in pivots {
                     scene.add_static(Pivot::new(up, down, left, right, x, y));
+                }
+            }
+
+            let sprite = resource_pool.get_image(Images::Food);
+
+            if let Some(ps) = read_positions("examples/pacman/assets/levels/level1_foods.txt") {
+                ctx.food_count = ps.len() as u32;
+                for (x, y) in ps {
+                    scene.add_static(Food::new(&sprite, x, y));
+                }
+            }
+
+            let sprite = resource_pool.get_image(Images::Special);
+
+            if let Some(ps) = read_positions("examples/pacman/assets/levels/level1_specials.txt") {
+                ctx.food_count += ps.len() as u32;
+                for (x, y) in ps {
+                    scene.add_static(Special::new(&sprite, x, y));
                 }
             }
 
@@ -146,7 +249,7 @@ mod level1 {
         }
     }
 
-    impl BronzeGame for Level1 {
+    impl Level for Level1 {
         fn is_running(&self) -> bool {
             self.running
         }
@@ -159,27 +262,28 @@ mod level1 {
             self.scene.input(input);
         }
 
-        fn pre_update(&mut self, _engine: &Engine) {
-            self.scene.pre_update(&());
+        fn pre_update(&mut self, ctx: &GameCtx) {
+            self.scene.pre_update(ctx);
         }
 
-        fn update(&mut self, _engine: &mut Engine, frame_time: Duration) {
-            self.scene.update(&mut (), frame_time);
+        fn update(&mut self, ctx: &mut GameCtx, frame_time: Duration) {
+            self.scene.update(ctx, frame_time);
 
-            self.scene.collisions(&mut ());
+            self.scene.collisions(ctx);
         }
 
-        fn post_update(&mut self, _engine: &Engine) {
-            self.scene.post_update(&());
+        fn post_update(&mut self, ctx: &GameCtx) {
+            self.scene.post_update(ctx);
+            if ctx.food_count == 0 {
+                self.next = true;
+            }
         }
 
-        fn draw(&self, target: &mut Canvas) {
+        fn draw(&self, ctx: &GameCtx, target: &mut Canvas) {
             self.bg.draw(target, (0.0, 0.0));
-            self.scene.draw(&(), target);
+            self.scene.draw(ctx, target);
         }
-    }
 
-    impl Level for Level1 {
         fn next_level(&self) -> Option<Levels> {
             self.next.then_some(Levels::Level2)
         }
@@ -198,10 +302,36 @@ mod level2 {
     }
 
     impl Level2 {
-        pub fn new(resource_pool: &Pool) -> Box<Self> {
+        pub fn new(resource_pool: &Pool, ctx: &mut GameCtx) -> Box<Self> {
             let bg = Sprite::new(&resource_pool.get_image(Images::Level2Bg));
 
-            let scene = Scene::new();
+            let mut scene = Scene::new();
+
+            scene.add_dynamic(Pacman::new(480, 450));
+
+            if let Some(pivots) = read_pivots("examples/pacman/assets/levels/level2_pivots.txt") {
+                for (up, down, left, right, x, y) in pivots {
+                    scene.add_static(Pivot::new(up, down, left, right, x, y));
+                }
+            }
+
+            let sprite = resource_pool.get_image(Images::Food);
+
+            if let Some(ps) = read_positions("examples/pacman/assets/levels/level2_foods.txt") {
+                ctx.food_count = ps.len() as u32;
+                for (x, y) in ps {
+                    scene.add_static(Food::new(&sprite, x, y));
+                }
+            }
+
+            let sprite = resource_pool.get_image(Images::Special);
+
+            if let Some(ps) = read_positions("examples/pacman/assets/levels/level2_specials.txt") {
+                ctx.food_count += ps.len() as u32;
+                for (x, y) in ps {
+                    scene.add_static(Special::new(&sprite, x, y));
+                }
+            }
 
             Box::new(Level2 {
                 bg,
@@ -212,7 +342,7 @@ mod level2 {
         }
     }
 
-    impl BronzeGame for Level2 {
+    impl Level for Level2 {
         fn is_running(&self) -> bool {
             self.running
         }
@@ -225,25 +355,26 @@ mod level2 {
             self.scene.input(input);
         }
 
-        fn update(&mut self, _engine: &mut Engine, frame_time: Duration) {
-            self.scene.update(&mut (), frame_time);
+        fn update(&mut self, ctx: &mut GameCtx, frame_time: Duration) {
+            self.scene.update(ctx, frame_time);
 
-            self.scene.collisions(&mut ());
+            self.scene.collisions(ctx);
         }
 
-        fn post_update(&mut self, _engine: &Engine) {
-            self.scene.post_update(&());
+        fn post_update(&mut self, ctx: &GameCtx) {
+            self.scene.post_update(ctx);
+            if ctx.food_count == 0 {
+                self.next = true;
+            }
         }
 
-        fn draw(&self, target: &mut Canvas) {
+        fn draw(&self, ctx: &GameCtx, target: &mut Canvas) {
             self.bg.draw(target, (0.0, 0.0));
-            self.scene.draw(&(), target);
+            self.scene.draw(ctx, target);
         }
-    }
 
-    impl Level for Level2 {
         fn next_level(&self) -> Option<Levels> {
-            self.next.then_some(Levels::EndScreen)
+            self.next.then_some(Levels::TitleScreen)
         }
     }
 }
@@ -255,15 +386,18 @@ mod game {
     pub struct Game {
         resource_pool: Pool,
         level: Box<dyn Level>,
+        ctx: GameCtx,
     }
 
     impl Game {
         pub fn new(resource_pool: Pool) -> Game {
             let title_screen = TitleScreen::new(&resource_pool);
+            let ctx = GameCtx::new(&resource_pool);
 
             Game {
                 resource_pool,
                 level: title_screen,
+                ctx,
             }
         }
     }
@@ -277,30 +411,29 @@ mod game {
             self.level.input(input);
         }
 
-        fn pre_update(&mut self, engine: &Engine) {
-            self.level.pre_update(engine);
+        fn pre_update(&mut self, _engine: &Engine) {
+            self.level.pre_update(&self.ctx);
         }
 
-        fn update(&mut self, engine: &mut Engine, frame_time: Duration) {
-            self.level.update(engine, frame_time);
+        fn update(&mut self, _engine: &mut Engine, frame_time: Duration) {
+            self.level.update(&mut self.ctx, frame_time);
         }
 
-        fn post_update(&mut self, engine: &Engine) {
-            self.level.post_update(engine);
+        fn post_update(&mut self, _engine: &Engine) {
+            self.level.post_update(&self.ctx);
 
             if let Some(next_level) = self.level.next_level() {
                 self.level = match next_level {
                     Levels::TitleScreen => TitleScreen::new(&self.resource_pool),
-                    Levels::Level1 => Level1::new(&self.resource_pool),
-                    Levels::Level2 => Level2::new(&self.resource_pool),
-                    Levels::GameOver => todo!("game over"),
-                    Levels::EndScreen => todo!("end screen"),
+                    Levels::Level1 => Level1::new(&self.resource_pool, &mut self.ctx),
+                    Levels::Level2 => Level2::new(&self.resource_pool, &mut self.ctx),
                 };
+                self.resource_pool.try_clear();
             }
         }
 
         fn draw(&self, target: &mut Canvas) {
-            self.level.draw(target);
+            self.level.draw(&self.ctx, target);
         }
     }
 }

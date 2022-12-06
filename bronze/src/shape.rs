@@ -26,6 +26,16 @@ mod prelude {
         }
 
         #[inline(always)]
+        fn position(&self) -> Point {
+            Point::new(self.left(), self.top())
+        }
+
+        #[inline(always)]
+        fn center(&self) -> Point {
+            Point::new(self.center_x(), self.center_y())
+        }
+
+        #[inline(always)]
         fn center_x(&self) -> f32 {
             (self.left() + self.right()) / 2.0
         }
@@ -35,16 +45,6 @@ mod prelude {
             (self.top() + self.bottom()) / 2.0
         }
 
-        #[inline(always)]
-        fn position(&self) -> Vector2f {
-            Vector2f::new(self.left(), self.top())
-        }
-
-        #[inline(always)]
-        fn center(&self) -> Vector2f {
-            Vector2f::new(self.center_x(), self.center_y())
-        }
-
         fn intersects_point(&self, other: &Point) -> bool;
 
         fn intersects_rect(&self, other: &Rect) -> bool;
@@ -52,7 +52,7 @@ mod prelude {
         fn intersects_circle(&self, other: &Circle) -> bool;
 
         fn intersects_mixed(&self, other: &Mixed) -> bool {
-            other.geometries.iter().any(|shape| shape.intersects(self))
+            other.shapes.iter().any(|shape| shape.intersects(self))
         }
 
         fn intersects<B: BBox>(&self, other: &B) -> bool;
@@ -188,7 +188,7 @@ pub use prelude::*;
 mod point {
     use super::*;
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Point {
         pub x: f32,
         pub y: f32,
@@ -205,6 +205,12 @@ mod point {
             (dx * dx + dy * dy).sqrt()
         }
 
+        pub fn angle(&self, other: &Point) -> f32 {
+            let dx = other.x - self.x;
+            let dy = other.y - self.y;
+            dy.atan2(dx).to_degrees().rem_euclid(360.0)
+        }
+
         pub fn as_ref(&self) -> ShapeRef {
             ShapeRef::Point(self)
         }
@@ -213,6 +219,12 @@ mod point {
     impl From<Vector2f> for Point {
         fn from(vector: Vector2f) -> Self {
             Point::new(vector.x, vector.y)
+        }
+    }
+
+    impl Into<Vector2f> for Point {
+        fn into(self) -> Vector2f {
+            Vector2f::new(self.x, self.y)
         }
     }
 
@@ -259,7 +271,7 @@ mod point {
         }
 
         fn intersects_circle(&self, other: &Circle) -> bool {
-            self.distance(&other.center().into()) <= other.radius
+            self.distance(&other.center()) <= other.radius
         }
 
         fn intersects<B: BBox>(&self, other: &B) -> bool {
@@ -272,7 +284,7 @@ pub use point::*;
 mod rect {
     use super::*;
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Rect {
         pub x: f32,
         pub y: f32,
@@ -367,7 +379,7 @@ pub use rect::*;
 mod circle {
     use super::*;
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Circle {
         pub x: f32,
         pub y: f32,
@@ -381,6 +393,10 @@ mod circle {
 
         pub fn from_point(Point { x, y }: Point, radius: f32) -> Self {
             Circle::new(x, y, radius)
+        }
+
+        pub fn radius(&self) -> f32 {
+            self.radius
         }
 
         pub fn as_ref(&self) -> ShapeRef {
@@ -448,10 +464,6 @@ mod mixed {
         Point(Point),
         Rect(Rect),
         Circle(Circle),
-    }
-
-    pub struct Mixed<'b> {
-        pub geometries: &'b [&'b Shape],
     }
 
     impl Shape {
@@ -550,9 +562,13 @@ mod mixed {
         }
     }
 
-    impl<'b> BBox for Mixed<'b> {
+    pub struct Mixed<'b> {
+        pub shapes: &'b [&'b Shape],
+    }
+
+    impl BBox for Mixed<'_> {
         fn left(&self) -> f32 {
-            self.geometries
+            self.shapes
                 .iter()
                 .map(|shape| shape.left())
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
@@ -560,7 +576,7 @@ mod mixed {
         }
 
         fn top(&self) -> f32 {
-            self.geometries
+            self.shapes
                 .iter()
                 .map(|shape| shape.top())
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
@@ -568,7 +584,7 @@ mod mixed {
         }
 
         fn right(&self) -> f32 {
-            self.geometries
+            self.shapes
                 .iter()
                 .map(|shape| shape.right())
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
@@ -576,7 +592,7 @@ mod mixed {
         }
 
         fn bottom(&self) -> f32 {
-            self.geometries
+            self.shapes
                 .iter()
                 .map(|shape| shape.bottom())
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
@@ -592,26 +608,79 @@ mod mixed {
         }
 
         fn intersects_point(&self, other: &Point) -> bool {
-            self.geometries
+            self.shapes
                 .iter()
                 .any(|shape| shape.intersects_point(other))
         }
 
         fn intersects_rect(&self, other: &Rect) -> bool {
-            self.geometries
-                .iter()
-                .any(|shape| shape.intersects_rect(other))
+            self.shapes.iter().any(|shape| shape.intersects_rect(other))
         }
 
         fn intersects_circle(&self, other: &Circle) -> bool {
-            self.geometries
+            self.shapes
                 .iter()
                 .any(|shape| shape.intersects_circle(other))
         }
 
         fn intersects<B: BBox>(&self, other: &B) -> bool {
-            self.geometries.iter().any(|shape| shape.intersects(other))
+            self.shapes.iter().any(|shape| shape.intersects(other))
         }
     }
 }
 pub use mixed::*;
+
+mod draw {
+    use super::*;
+
+    use sfml::graphics::{CircleShape, Color, RectangleShape, Shape as SfmlShape, Transformable};
+
+    use crate::window::Canvas;
+
+    pub trait DrawBBox {
+        fn draw(&self, target: &mut Canvas);
+    }
+
+    impl DrawBBox for ShapeRef<'_> {
+        fn draw(&self, target: &mut Canvas) {
+            match self {
+                ShapeRef::Rect(rect) => {
+                    let mut rect_data = RectangleShape::new();
+                    rect_data.set_position((rect.left(), rect.top()));
+                    rect_data.set_size((rect.width(), rect.height()));
+                    rect_data.set_outline_thickness(1.0);
+                    rect_data.set_outline_color(Color::MAGENTA);
+                    rect_data.set_fill_color(Color::TRANSPARENT);
+                    target.draw(&rect_data);
+                }
+                ShapeRef::Circle(circle) => {
+                    let mut circle_data = CircleShape::new(circle.radius(), 24);
+                    circle_data.set_position(circle.center());
+                    circle_data.set_outline_thickness(1.0);
+                    circle_data.set_outline_color(Color::MAGENTA);
+                    circle_data.set_fill_color(Color::TRANSPARENT);
+                    target.draw(&circle_data);
+                }
+                ShapeRef::Point(point) => {
+                    let mut circle_data = CircleShape::new(1.0, 1);
+                    circle_data.set_position(point.position());
+                    circle_data.set_outline_thickness(1.0);
+                    circle_data.set_outline_color(Color::MAGENTA);
+                    circle_data.set_fill_color(Color::TRANSPARENT);
+                    target.draw(&circle_data);
+                }
+                ShapeRef::Mixed(mixed) => {
+                    for shape in mixed.shapes {
+                        match shape {
+                            Shape::Rect(rect) => rect.as_ref().draw(target),
+                            Shape::Circle(circle) => circle.as_ref().draw(target),
+                            Shape::Point(point) => point.as_ref().draw(target),
+                        }
+                    }
+                }
+                ShapeRef::None => {}
+            }
+        }
+    }
+}
+pub use draw::*;

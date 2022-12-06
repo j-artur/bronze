@@ -76,15 +76,15 @@ mod font {
 pub use font::*;
 
 mod resource_pool {
-    use std::{collections::HashMap, fmt::Debug, hash::Hash, rc::Rc};
+    use std::{collections::HashMap, hash::Hash, rc::Rc};
 
     use once_cell::unsync::OnceCell;
     use strum::IntoEnumIterator;
 
     use super::*;
 
-    pub trait Key: IntoEnumIterator + Debug + Eq + Hash {}
-    impl<T> Key for T where T: IntoEnumIterator + Debug + Eq + Hash {}
+    pub trait Key: IntoEnumIterator + Eq + Hash {}
+    impl<T> Key for T where T: IntoEnumIterator + Eq + Hash {}
 
     pub struct ResourcePool<I: Key, A: Key, F: Key> {
         images: HashMap<I, OnceCell<Rc<Image>>>,
@@ -140,6 +140,55 @@ mod resource_pool {
         pub fn get_font(&self, id: F) -> Rc<Font> {
             let cell = self.fonts.get(&id).unwrap();
             Rc::clone(cell.get_or_init(|| Rc::new((self.load_font)(&id))))
+        }
+
+        pub fn try_clear(&mut self) {
+            for (_, cell) in &mut self.images {
+                let cell: &mut OnceCell<Rc<Image>> = cell;
+
+                if let Some(rc) = cell.get() {
+                    if Rc::strong_count(rc) == 1 {
+                        cell.take();
+                    }
+                }
+            }
+
+            for (_, cell) in &mut self.audios {
+                let cell: &mut OnceCell<Rc<Audio>> = cell;
+
+                if let Some(rc) = cell.get() {
+                    if Rc::strong_count(rc) == 1 {
+                        cell.take();
+                    }
+                }
+            }
+
+            for (_, cell) in &mut self.fonts {
+                let cell: &mut OnceCell<Rc<Font>> = cell;
+
+                if let Some(rc) = cell.get() {
+                    if Rc::strong_count(rc) == 1 {
+                        cell.take();
+                    }
+                }
+            }
+        }
+
+        pub fn full_clear(&mut self) {
+            for (_, cell) in &mut self.images {
+                let cell: &mut OnceCell<Rc<Image>> = cell;
+                cell.take();
+            }
+
+            for (_, cell) in &mut self.audios {
+                let cell: &mut OnceCell<Rc<Audio>> = cell;
+                cell.take();
+            }
+
+            for (_, cell) in &mut self.fonts {
+                let cell: &mut OnceCell<Rc<Font>> = cell;
+                cell.take();
+            }
         }
     }
 }

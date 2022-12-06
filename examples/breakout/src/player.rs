@@ -40,9 +40,7 @@ impl Player {
     }
 }
 
-impl Entity for Player {
-    type Ctx = GameContext;
-
+impl Entity<GameContext> for Player {
     #[inline]
     fn bbox(&self) -> ShapeRef {
         self.bbox.as_ref()

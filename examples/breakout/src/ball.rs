@@ -46,13 +46,11 @@ impl Ball {
     }
 }
 
-impl Collision<Ball> for Ball {
+impl Collision<Ball, GameContext> for Ball {
     fn on_collision(&mut self, _other: &Ball, _ctx: &mut GameContext) {}
 }
 
-impl Entity for Ball {
-    type Ctx = GameContext;
-
+impl Entity<GameContext> for Ball {
     #[inline]
     fn bbox(&self) -> ShapeRef {
         self.bbox.as_ref()
@@ -106,7 +104,7 @@ impl Entity for Ball {
     }
 }
 
-impl Collision<StaticEntity> for Ball {
+impl Collision<StaticEntity, GameContext> for Ball {
     #[inline]
     fn on_collision(&mut self, other: &StaticEntity, _ctx: &mut GameContext) {
         match other {

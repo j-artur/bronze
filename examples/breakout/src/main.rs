@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use ball::Ball;
-use block::Block;
 use bronze::{
     engine::Engine,
     game::Game,
@@ -14,15 +12,13 @@ use bronze::{
     window::{Canvas, FPSConfig, Window, WindowConfig},
 };
 
-use debugger::Debugger;
-use player::Player;
-use resources::*;
-
 mod ball;
 mod block;
 mod debugger;
 mod player;
 mod resources;
+
+use crate::{ball::Ball, block::Block, debugger::Debugger, player::Player, resources::*};
 
 pub const WINDOW_WIDTH: u32 = 960;
 pub const WINDOW_HEIGHT: u32 = 540;
@@ -36,9 +32,7 @@ pub enum StaticEntity {
     Block(Block),
 }
 
-impl Entity for StaticEntity {
-    type Ctx = GameContext;
-
+impl Entity<GameContext> for StaticEntity {
     #[inline]
     fn bbox(&self) -> ShapeRef {
         match self {
@@ -56,39 +50,39 @@ impl Entity for StaticEntity {
     }
 
     #[inline]
-    fn pre_update(&mut self, _ctx: &GameContext) {
+    fn pre_update(&mut self, ctx: &GameContext) {
         match self {
-            StaticEntity::Player(player) => player.pre_update(_ctx),
-            StaticEntity::Block(block) => block.pre_update(_ctx),
+            StaticEntity::Player(player) => player.pre_update(ctx),
+            StaticEntity::Block(block) => block.pre_update(ctx),
         }
     }
 
     #[inline]
-    fn update(&mut self, _ctx: &mut GameContext, _frame_time: Duration) {
+    fn update(&mut self, ctx: &mut GameContext, frame_time: Duration) {
         match self {
-            StaticEntity::Player(player) => player.update(_ctx, _frame_time),
-            StaticEntity::Block(block) => block.update(_ctx, _frame_time),
+            StaticEntity::Player(player) => player.update(ctx, frame_time),
+            StaticEntity::Block(block) => block.update(ctx, frame_time),
         }
     }
 
     #[inline]
-    fn post_update(&mut self, _ctx: &GameContext) {
+    fn post_update(&mut self, ctx: &GameContext) {
         match self {
-            StaticEntity::Player(player) => player.post_update(_ctx),
-            StaticEntity::Block(block) => block.post_update(_ctx),
+            StaticEntity::Player(player) => player.post_update(ctx),
+            StaticEntity::Block(block) => block.post_update(ctx),
         }
     }
 
     #[inline]
-    fn draw(&self, _ctx: &GameContext, _target: &mut Canvas) {
+    fn draw(&self, ctx: &GameContext, target: &mut Canvas) {
         match self {
-            StaticEntity::Player(player) => player.draw(_ctx, _target),
-            StaticEntity::Block(block) => block.draw(_ctx, _target),
+            StaticEntity::Player(player) => player.draw(ctx, target),
+            StaticEntity::Block(block) => block.draw(ctx, target),
         }
     }
 }
 
-impl Collision<Ball> for StaticEntity {
+impl Collision<Ball, GameContext> for StaticEntity {
     #[inline]
     fn on_collision(&mut self, other: &Ball, ctx: &mut GameContext) {
         match self {

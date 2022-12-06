@@ -26,22 +26,24 @@ pub enum Fonts {
 pub fn load_image(id: &Images) -> Image {
     use Images::*;
 
-    if let Some(image) = match id {
-        Icon => Image::new("examples/breakout/assets/images/icon.png"),
-        Cursor => Image::new("examples/breakout/assets/images/cursor.png"),
-        Background => Image::new("examples/breakout/assets/images/bg.jpg"),
-        Player => Image::new("examples/breakout/assets/images/player.png"),
-        Ball => Image::new("examples/breakout/assets/images/ball.png"),
-        Tile1 => Image::new("examples/breakout/assets/images/tile1.png"),
-        Tile2 => Image::new("examples/breakout/assets/images/tile2.png"),
-        Tile3 => Image::new("examples/breakout/assets/images/tile3.png"),
-        Tile4 => Image::new("examples/breakout/assets/images/tile4.png"),
-        Tile5 => Image::new("examples/breakout/assets/images/tile5.png"),
-    } {
-        println!("Loaded image {:?}", id);
+    let path = match id {
+        Icon => "examples/breakout/assets/images/icon.png",
+        Cursor => "examples/breakout/assets/images/cursor.png",
+        Background => "examples/breakout/assets/images/bg.jpg",
+        Player => "examples/breakout/assets/images/player.png",
+        Ball => "examples/breakout/assets/images/ball.png",
+        Tile1 => "examples/breakout/assets/images/tile1.png",
+        Tile2 => "examples/breakout/assets/images/tile2.png",
+        Tile3 => "examples/breakout/assets/images/tile3.png",
+        Tile4 => "examples/breakout/assets/images/tile4.png",
+        Tile5 => "examples/breakout/assets/images/tile5.png",
+    };
+
+    if let Some(image) = Image::new(path) {
+        println!("Loaded image {:?} from {}", id, path);
         image
     } else {
-        panic!("Failed to load image {:?}", id)
+        panic!("Failed to load image {:?} from {}", id, path)
     }
 }
 
@@ -52,9 +54,11 @@ pub fn load_audio(_id: &Audios) -> Audio {
 pub fn load_font(id: &Fonts) -> Font {
     use Fonts::*;
 
-    if let Some(font) = match id {
-        Debug => Font::new("examples/breakout/assets/fonts/JetBrainsMono[wght].ttf"),
-    } {
+    let path = match id {
+        Debug => "examples/breakout/assets/fonts/JetBrainsMono[wght].ttf",
+    };
+
+    if let Some(font) = Font::new(path) {
         println!("Loaded font {:?}", id);
         font
     } else {

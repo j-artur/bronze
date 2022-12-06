@@ -1,15 +1,21 @@
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 
 use crate::{
     input::InputManager,
-    shape::{BBox, ShapeRef},
+    shape::{BBox, DrawBBox, ShapeRef},
     window::Canvas,
 };
 
-pub trait Entity {
-    type Ctx;
+pub trait Entity<Ctx> {
+    #[inline]
+    fn bbox(&self) -> ShapeRef {
+        ShapeRef::None
+    }
 
-    fn bbox(&self) -> ShapeRef;
+    #[inline]
+    fn should_be_removed(&self) -> bool {
+        false
+    }
 
     #[inline]
     fn input(&mut self, input: &InputManager) {
@@ -17,43 +23,50 @@ pub trait Entity {
     }
 
     #[inline]
-    fn pre_update(&mut self, ctx: &Self::Ctx) {
+    fn pre_update(&mut self, ctx: &Ctx) {
         let _ = ctx;
     }
 
-    fn update(&mut self, ctx: &mut Self::Ctx, frame_time: Duration);
+    fn update(&mut self, ctx: &mut Ctx, frame_time: Duration) {
+        let _ = (ctx, frame_time);
+    }
 
     #[inline]
-    fn post_update(&mut self, ctx: &Self::Ctx) {
+    fn post_update(&mut self, ctx: &Ctx) {
         let _ = ctx;
     }
 
-    fn draw(&self, ctx: &Self::Ctx, target: &mut Canvas);
+    #[inline]
+    fn draw(&self, ctx: &Ctx, target: &mut Canvas) {
+        let _ = (ctx, target);
+    }
 }
 
-pub trait Collision<T: Entity> {
-    fn on_collision(&mut self, other: &T, ctx: &mut T::Ctx);
+pub trait Collision<T: Entity<Ctx>, Ctx> {
+    fn on_collision(&mut self, other: &T, ctx: &mut Ctx);
 }
 
 pub struct Scene<S, D, Ctx>
 where
-    S: Entity<Ctx = Ctx> + Collision<D>,
-    D: Entity<Ctx = Ctx> + Collision<D> + Collision<S>,
+    S: Entity<Ctx> + Collision<D, Ctx>,
+    D: Entity<Ctx> + Collision<D, Ctx> + Collision<S, Ctx>,
 {
     static_entities: Vec<S>,
     dynamic_entities: Vec<D>,
+    phantom: PhantomData<Ctx>,
 }
 
 impl<S, D, Ctx> Scene<S, D, Ctx>
 where
-    S: Entity<Ctx = Ctx> + Collision<D>,
-    D: Entity<Ctx = Ctx> + Collision<D> + Collision<S>,
+    S: Entity<Ctx> + Collision<D, Ctx>,
+    D: Entity<Ctx> + Collision<D, Ctx> + Collision<S, Ctx>,
 {
     #[inline]
     pub fn new() -> Self {
-        Self {
+        Scene {
             static_entities: Vec::new(),
             dynamic_entities: Vec::new(),
+            phantom: PhantomData,
         }
     }
 
@@ -65,22 +78,6 @@ where
     #[inline]
     pub fn add_dynamic<E: Into<D>>(&mut self, entity: E) {
         self.dynamic_entities.push(entity.into());
-    }
-
-    pub fn remove_static(&mut self, entity: &S) -> Option<S> {
-        let index = self
-            .static_entities
-            .iter()
-            .position(|e| std::ptr::eq(e, entity))?;
-        Some(self.static_entities.swap_remove(index))
-    }
-
-    pub fn remove_dynamic(&mut self, entity: &D) -> Option<D> {
-        let index = self
-            .dynamic_entities
-            .iter()
-            .position(|e| std::ptr::eq(e, entity))?;
-        Some(self.dynamic_entities.swap_remove(index))
     }
 
     pub fn input(&mut self, input: &crate::input::InputManager) {
@@ -121,6 +118,9 @@ where
         for entity in self.dynamic_entities.iter_mut() {
             entity.post_update(ctx);
         }
+
+        self.static_entities.retain(|e| !e.should_be_removed());
+        self.dynamic_entities.retain(|e| !e.should_be_removed());
     }
 
     pub fn collisions(&mut self, ctx: &mut Ctx) {
@@ -173,5 +173,31 @@ where
         for entity in self.dynamic_entities.iter() {
             entity.draw(ctx, canvas);
         }
+    }
+
+    pub fn draw_bboxes(&self, canvas: &mut Canvas) {
+        for entity in self.static_entities.iter() {
+            entity.bbox().draw(canvas);
+        }
+
+        for entity in self.dynamic_entities.iter() {
+            entity.bbox().draw(canvas);
+        }
+    }
+
+    pub fn remove_static(&mut self, entity: &S) -> Option<S> {
+        let index = self
+            .static_entities
+            .iter()
+            .position(|e| std::ptr::eq(e, entity))?;
+        Some(self.static_entities.swap_remove(index))
+    }
+
+    pub fn remove_dynamic(&mut self, entity: &D) -> Option<D> {
+        let index = self
+            .dynamic_entities
+            .iter()
+            .position(|e| std::ptr::eq(e, entity))?;
+        Some(self.dynamic_entities.swap_remove(index))
     }
 }

@@ -33,9 +33,7 @@ impl Debugger {
     }
 }
 
-impl Entity for Debugger {
-    type Ctx = GameContext;
-
+impl Entity<GameContext> for Debugger {
     #[inline]
     fn input(&mut self, input: &InputManager) {
         if input.key_pressed(Key::F) && input.key_down(Key::LControl) {

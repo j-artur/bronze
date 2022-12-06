@@ -53,9 +53,7 @@ impl Block {
     }
 }
 
-impl Entity for Block {
-    type Ctx = GameContext;
-
+impl Entity<GameContext> for Block {
     fn bbox(&self) -> ShapeRef {
         self.bbox.as_ref()
     }
@@ -87,7 +85,7 @@ impl Into<StaticEntity> for Block {
     }
 }
 
-impl Collision<Ball> for Block {
+impl Collision<Ball, GameContext> for Block {
     #[inline]
     fn on_collision(&mut self, _other: &Ball, _ctx: &mut GameContext) {
         self.fall();
